@@ -1,0 +1,2321 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>化学すごろく(序)</title>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1b1b2f;--panel:#2a2a4a;--ink:#f4f1de;--accent:#ffd23f;}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:'DotGothic16','MS Gothic','Hiragino Kaku Gothic ProN','Yu Gothic',monospace;min-height:100vh;display:flex;justify-content:center;padding:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));-webkit-tap-highlight-color:transparent}
+#app{width:100%;max-width:680px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+h1{margin:0;font-size:28px;font-weight:normal;color:var(--accent);text-shadow:3px 3px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;letter-spacing:2px}
+.box{background:var(--panel);border:4px solid var(--ink);box-shadow:0 0 0 4px #000;padding:10px;margin:8px 4px 12px}
+.btn{font:inherit;font-size:16px;color:#1b1b2f;background:var(--accent);border:3px solid #000;box-shadow:0 4px 0 #a07800;padding:10px 16px;cursor:pointer;transition:none}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #a07800}
+.btn:disabled{background:#8a8a9a;box-shadow:0 4px 0 #55556a;color:#444;cursor:default}
+.btn.sub{background:#cfd2e8;box-shadow:0 4px 0 #7b7fa0;font-size:14px;padding:6px 10px}
+.btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.btn.big{font-size:20px;padding:12px 22px}
+#setup h2{margin:0 0 8px;font-size:18px;font-weight:normal}
+.srow{display:flex;align-items:center;gap:10px;margin:8px 0}
+.srow .chip{width:20px;height:20px;border:3px solid #000}
+.srow .nm{width:56px}
+.srow .btn{min-width:96px}
+#err{color:#ff8a8a;min-height:20px;margin:6px 0}
+.stlist{font-size:14px;line-height:1.5;margin:0 0 12px}
+.stlist .lg{align-items:flex-start}
+
+/* 縦長の盤面(スライドで見る) */
+#vpw{position:relative;max-width:640px;margin:0 auto}
+#vp{height:300px;height:clamp(300px,calc(100vh - 300px),640px);height:clamp(300px,calc(100dvh - 300px),640px);overflow-y:auto;overflow-x:hidden;border:4px solid #000;background:#222;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;cursor:grab;scrollbar-width:thin}
+#board{display:block;width:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+#toast{position:static;margin-top:6px;min-height:34px;background:rgba(0,0,0,.8);border:3px solid #fff;padding:6px 8px;font-size:14px;line-height:1.4;pointer-events:none;color:var(--accent)}
+#focus{position:absolute;top:10px;right:24px;z-index:2}
+#ctl{display:flex;align-items:center;gap:12px;margin:8px auto 0;max-width:640px}
+#dice{width:64px;height:64px;image-rendering:pixelated;flex:none}
+#turn{flex:1;min-width:0}
+#turn .who{font-size:18px;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+#turn .stg{font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:8px;color:#d8dcf5}
+#turn .chip{display:inline-block;width:16px;height:16px;border:3px solid #000;flex:none}
+#log{min-height:92px;font-size:15px;line-height:1.5}
+#log div{opacity:.55}
+#log div:last-child{opacity:1;color:var(--accent)}
+#players{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pl{display:flex;align-items:center;gap:8px;padding:6px 8px;border:3px solid transparent;font-size:14px}
+.pl.on{border-color:var(--accent)}
+.pl .chip{width:14px;height:14px;border:2px solid #000;flex:none}
+.pl .st{margin-left:auto;color:#ffb3b3}
+details{font-size:14px;line-height:1.6}
+summary{cursor:pointer}
+.lg{display:flex;align-items:center;gap:8px;margin:4px 0}
+.lg i{display:inline-block;width:16px;height:16px;border:2px solid #000;flex:none;margin-top:2px}
+#deck{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+#deck .dk{display:flex;align-items:center;gap:12px;flex:1 1 150px;min-width:0}
+#deckcv,#deckcv2{width:84px;height:108px;image-rendering:pixelated;flex:none}
+#deck .dn{flex:1;min-width:0}
+#deck .dt{font-size:14px;color:#d8dcf5;margin-bottom:6px}
+#deck .dc{font-size:16px}
+#deck .dc b{font-weight:normal;font-size:36px;color:var(--accent);text-shadow:2px 2px 0 #000;margin:0 4px}
+#qsamples .qhd{display:flex;align-items:center;gap:8px;margin:14px 4px 0;font-size:15px}
+#qsamples .qhd:first-child{margin-top:4px}
+#qsamples .qhd i{display:inline-block;width:14px;height:14px;border:2px solid #000;flex:none}
+#qsamples .qhd .n{margin-left:auto;font-size:13px;color:#d8dcf5}
+.qrow{display:flex;align-items:stretch;gap:16px;overflow-x:auto;padding:12px 8px 10px}
+.qwrap{flex:none;width:220px;display:flex;flex-direction:column}
+.qcard{flex:1;width:220px;min-height:310px;background:#fff;color:#000;border:6px solid var(--bc);box-shadow:0 0 0 3px #000,inset 0 0 0 2px #000;display:flex;flex-direction:column;gap:6px;padding:6px;font-size:12px;line-height:1.4}
+.qcard .qlv{flex:none;align-self:flex-start;font-size:14px;line-height:1;letter-spacing:1px;color:#e8a400;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;padding:1px 2px}
+.qcard .qlv .off{color:#d4d4d4}
+.qcard .qq{flex:1 1 auto;min-height:84px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.5;padding:4px;overflow-wrap:anywhere}
+.qcard .qa{flex:none;display:flex;align-items:center;min-height:26px;border:2px solid #000;padding:3px 6px;overflow-wrap:anywhere}
+.qcard .qa b{font-weight:normal;color:var(--bc);margin-right:5px;flex:none}
+.qcard .qa .qt{flex:1;min-width:0}
+.qcard .qa .qm{flex:none;width:16px;margin-left:4px;text-align:right;font-size:12px;line-height:1}
+.qwrap .ql{text-align:center;margin-top:10px;font-size:12px;color:#d8dcf5}
+#quiz{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;flex-direction:column;align-items:center;gap:22px;z-index:9;padding:16px;overflow-y:auto}
+#quizBox{margin-top:auto}
+#qstage{position:relative}
+#qstage .cb{--bt:translate(calc(var(--i) * -3px),calc(var(--i) * -3px)) scale(.62);position:absolute;inset:0;border:6px solid #f4f1de;box-shadow:0 0 0 3px #000,inset 0 0 0 2px #000;background:#2f6fd6 repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 6px,transparent 6px 12px);display:flex;align-items:center;justify-content:center;transform:var(--bt);opacity:0}
+#qstage.ev .cb{background:#d63a3a repeating-linear-gradient(45deg,rgba(255,255,255,.16) 0 6px,transparent 6px 12px)}
+#qstage .cb::before{content:'';position:absolute;inset:12px;border:4px solid #ffd23f}
+#qstage .cb span{position:relative;width:34%;aspect-ratio:1;border:4px solid #000;border-radius:50%;background:#ffd23f;color:#222;font-size:48px;line-height:1;display:flex;align-items:center;justify-content:center}
+#qstage .cb.rise{animation:qrise .75s cubic-bezier(.2,.8,.25,1) both;animation-delay:calc(var(--i) * 70ms)}
+#qstage .cb.shuf{opacity:1;animation:qshuf .85s ease-in-out 2 both;animation-delay:calc(var(--i) * 50ms)}
+#qstage .cb.draw{opacity:1;animation:qdraw .6s ease-in-out both}
+#qstage .cb.fade{animation:qfade .45s ease-in both}
+#qstage .cb.flipout{opacity:1;animation:qflipout .28s ease-in both}
+.qflipin{animation:qflipin .28s ease-out both}
+@keyframes qrise{from{opacity:0;transform:translate(0,160px) scale(.35)}to{opacity:1;transform:var(--bt)}}
+@keyframes qshuf{0%,100%{transform:var(--bt)}35%{transform:translate(var(--dx),calc(var(--i) * -3px)) rotate(var(--r)) scale(.62)}65%{transform:var(--bt)}}
+@keyframes qdraw{0%{transform:var(--bt)}45%{transform:translate(0,-40px) scale(.72)}100%{transform:translate(0,0) scale(1)}}
+@keyframes qfade{from{opacity:1;transform:var(--bt)}to{opacity:0;transform:translate(0,60px) scale(.5)}}
+@keyframes qflipout{from{transform:perspective(1100px) rotateY(0)}to{transform:perspective(1100px) rotateY(90deg)}}
+@keyframes qflipin{from{transform:perspective(1100px) rotateY(-90deg)}to{transform:perspective(1100px) rotateY(0)}}
+.ecard{--bc:#d63a3a}
+.ecard .eh{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;background:#d63a3a;color:#fff;padding:4px 8px;border:2px solid #000;font-size:.85em;text-shadow:1px 1px 0 #000}
+.ecard .en{flex:none;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;font-size:1.15em;line-height:1.35;padding:4px 2px;overflow-wrap:anywhere}
+.ecard .ek,.ecard .ee{flex:none;border:2px solid #000;padding:6px 8px;font-size:.8em;line-height:1.55;overflow-wrap:anywhere}
+.ecard .ek{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;background:repeating-linear-gradient(45deg,#fff0f0 0 8px,#fff 8px 16px)}
+.ecard .ee{background:#fff6d6}
+.ecard .tg{display:inline-block;align-self:flex-start;background:#000;color:#fff;font-size:.85em;line-height:1;padding:2px 6px;margin-bottom:4px}
+.ecard .ee .tg{background:#d63a3a}
+.mgw{width:min(94vw,440px);display:flex;flex-direction:column;gap:8px}
+.mgt{display:flex;align-items:center;gap:8px;font-size:15px;text-shadow:2px 2px 0 #000}
+.mgt .bar{flex:1;height:14px;border:3px solid #000;background:#222}
+.mgt .bar i{display:block;height:100%;width:100%;background:#ffd23f}
+.mg{background:#14141f;color:#fff;border:6px solid #d63a3a;box-shadow:0 0 0 3px #000;padding:12px;display:flex;flex-direction:column;gap:10px;font-size:18px;min-height:320px;touch-action:manipulation}
+.mg .mgn{text-align:center;color:#ffd23f;font-size:1.1em;line-height:1.4}
+.mg .mgi{font-size:.8em;line-height:1.5;color:#d8dcf5;text-align:center}
+.mg .mga{flex:1;display:flex;flex-direction:column;gap:10px;justify-content:center}
+.mgmsg{min-height:1.4em;text-align:center;color:#ffd23f;font-size:.85em}
+.mgbar{position:relative;height:44px;border:3px solid #fff;background:#333}
+.mgbar.v{height:170px;width:70px;margin:0 auto}
+.mgbar.s{height:20px}
+.mgbar .mgz{position:absolute;background:rgba(80,220,120,.75)}
+.mgbar:not(.v) .mgz{top:0;bottom:0}
+.mgbar.v .mgz{left:0;right:0}
+.mgbar .mgm{position:absolute;background:#fff;box-shadow:0 0 0 2px #000}
+.mgbar:not(.v) .mgm{width:8px;top:-3px;bottom:-3px;transform:translateX(-50%)}
+.mgbar.v .mgm{left:-3px;right:-3px;height:8px;transform:translateY(-50%)}
+.mgbar .mgf{position:absolute;left:0;background:#5ab0ff}
+.mgbar.v .mgf{right:0;bottom:0;height:0}
+.mgbar.hz .mgf{top:0;bottom:0;width:0}
+.mgbar.s .mgf{top:0;bottom:0;width:0;background:#7ed957}
+.mgb{width:100%}
+.mgrow{display:flex;gap:10px}
+.mgcv{width:100%;border:3px solid #fff;touch-action:none;image-rendering:pixelated;background:#14141f}
+.mgflask{position:relative;width:110px;height:200px;margin:0 auto;border:4px solid #fff;border-top:none;background:#222}
+.mgflask .liq{position:absolute;left:0;right:0;bottom:0;height:0;background:#5ab0ff}
+.mgflask .mk{position:absolute;left:-16px;right:-16px;height:0;border-top:3px solid #ff5a5a}
+.mgflask .mk span{position:absolute;left:100%;top:-11px;margin-left:6px;font-size:14px;color:#ff8a8a;white-space:nowrap}
+.mgsort{min-height:100px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:30px;line-height:1.3;border:3px solid #fff;background:#222;padding:8px;overflow-wrap:anywhere}
+.mgpairs{display:flex;gap:10px}
+.mgpc{flex:1;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mgpb{font:inherit;font-size:.82em;line-height:1.35;color:#000;background:#dcdcf0;border:3px solid #000;box-shadow:0 0 0 2px #fff;padding:10px 6px;min-height:58px;cursor:pointer;overflow-wrap:anywhere;touch-action:manipulation}
+.mgpb.sel{background:#ffe066}
+.mgpb.ok{background:#7ed957;opacity:.75;cursor:default}
+.mgemo{text-align:center;font-size:56px;line-height:1.1;transition:transform .06s}
+#quizHint{min-height:22px;font-size:17px;color:var(--accent);text-shadow:2px 2px 0 #000;text-align:center}
+#quizOk{margin-bottom:auto}
+.qcard .qa.tap{cursor:pointer}
+.qcard .qa.tap:active{background:#ffe9a8}
+@media (hover:hover){.qcard .qa.tap:hover{background:#fff3c4}}
+#quiz .qcard{width:min(94vw,440px);min-height:min(480px,64vh);font-size:19px;gap:10px;padding:10px}
+#quiz .qcard .qq{font-size:23px;min-height:130px;line-height:1.6}
+#quiz .qcard .qlv{font-size:26px}
+#quiz .ecard{font-size:20px}
+#quiz .qcard .qa{min-height:44px;padding:6px 10px}
+#quiz .qcard .qa .qm{width:24px;font-size:18px}
+#quiz{gap:16px}
+#quiz #qstage .cb span{font-size:72px}
+#over{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+#over .box{text-align:center;max-width:420px;width:100%;margin:0}
+#over h2{font-size:24px;font-weight:normal;color:var(--accent);margin:6px 0 16px}
+#over .acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#home{text-align:center;padding:28px 12px}
+#home .ttl{font-size:34px;color:var(--accent);text-shadow:3px 3px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000;letter-spacing:3px;margin:12px 0 6px}
+#home .sub{font-size:14px;color:#d8dcf5;margin:0 0 26px}
+#home .hbtns{display:flex;flex-direction:column;gap:16px;align-items:center}
+#home .hbtns .btn{width:min(100%,260px)}
+#howto p{font-size:14px;line-height:1.6}
+#howto .acts,#setup .acts{margin-top:12px}
+#local h2,#lobby h2{margin:0 0 8px;font-size:18px;font-weight:normal}
+#local .row{display:flex;gap:8px;align-items:center;margin:10px 0;flex-wrap:wrap}
+#local input{font:inherit;font-size:18px;width:9em;padding:8px;border:3px solid #000;background:#fff;color:#000;text-transform:lowercase}
+#localNote{color:#ffb3b3;font-size:14px;line-height:1.5;margin:6px 0;min-height:18px}
+.help details{margin:8px 0}.help p{margin:6px 0}
+#lobCode{text-align:center;margin:6px 0}
+#lobCode .cd{font-size:44px;letter-spacing:8px;color:var(--accent);text-shadow:3px 3px 0 #000;margin:4px 0}
+#lobCode .qr{margin:8px 0 2px}
+#lobCode small{display:block;font-size:13px;color:#d8dcf5}
+#lobCount{font-size:16px;margin:10px 0}
+#lobMsg{min-height:20px;margin:8px 0;color:var(--accent);font-size:14px;line-height:1.5}
+#netst{font-size:13px;color:#d8dcf5;text-align:center;margin:6px auto 0;max-width:640px}
+#overNote{font-size:14px;color:#d8dcf5;margin:0 0 12px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>化学すごろく(序)</h1>
+    <button class="btn sub" id="mute" type="button">おと: ON</button>
+  </header>
+
+  <!-- ホーム画面 -->
+  <section id="home" class="box">
+    <div class="ttl">化学すごろく(序)</div>
+    <p class="sub">100マスのゴールをめざそう</p>
+    <div class="hbtns">
+      <button class="btn big" id="homeCpu" type="button">CPU対戦</button>
+      <button class="btn big" id="homeLocal" type="button">ローカル対戦</button>
+      <button class="btn big" id="homeHow" type="button">あそびかた</button>
+    </div>
+  </section>
+
+  <!-- あそびかた画面 -->
+  <section id="howto" class="box" hidden>
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight:normal">あそびかた</h2>
+    <p>サイコロをふって、スタートからゴール(100マスめ)をめざそう。盤面は上へ上へとのびているよ。ドラッグ・スワイプ・ホイールで上下にスライドして見られるよ(「現在地」ボタンで自分の位置にもどる)。ゴールはぴったりで止まらないと、あまった分だけもどされるよ(ただし、さいごの着順が決まった人は、ぴったりでなくてもゴールできるよ)。イベントや「戻る」で動いた先のマスの効果は発動しないよ。イベントマスではカードの効果が使われるよ(ミニゲームは成功・失敗で効果がかわる)。休みマスは1〜2回休み、戻るマスは2〜5マス戻り(マスの右下の数字)、サイコロ戻るマスはサイコロの目だけ戻るよ(1〜6マス)。</p>
+    <p>ポイント: ゴールの着順で 1着10P・2着5P・3着3P・4着1P。クイズに正解すると★の数だけ(★4なら4P、★1なら1P)。イベントのミニゲームに成功すると3P。ゴールした人も番がまわってきて、サイコロが2か5ならクイズカードを1まいひいて答えられるよ。全員がゴールしたら、ポイントがいちばん多い人の勝ちだよ。</p>
+    <p style="margin-bottom:4px">マスの種類</p>
+    <div id="kindlist3" class="stlist"></div>
+    <div class="acts"><button class="btn sub" id="howBack" type="button">ホームにもどる</button></div>
+  </section>
+
+  <!-- ローカル対戦メニュー -->
+  <section id="local" class="box" hidden>
+    <h2>ローカル対戦(友だちと対戦)</h2>
+    <div id="localNote"></div>
+    <div class="row"><button class="btn" id="localRetry" type="button" hidden>もう一度つなぐ</button></div>
+    <div class="row"><button class="btn big" id="localHost" type="button">へやを作る</button></div>
+    <div class="row">
+      <input id="joinCode" maxlength="12" autocapitalize="off" autocomplete="off" placeholder="へやコード">
+      <button class="btn" id="localJoin" type="button">コードで参加</button>
+    </div>
+    <div class="help" id="localHelp"></div>
+    <div class="acts"><button class="btn sub" id="localBack" type="button">ホームにもどる</button></div>
+  </section>
+
+  <!-- へや(ロビー) -->
+  <section id="lobby" class="box" hidden>
+    <h2 id="lobTitle"></h2>
+    <div id="lobCode" hidden></div>
+    <div id="lobCount"></div>
+    <div id="lobSlots" class="stlist"></div>
+    <div id="lobMsg"></div>
+    <div class="help" id="lobHelp"></div>
+    <div class="acts"><button class="btn sub" id="lobBack" type="button">やめる</button></div>
+  </section>
+
+  <!-- 設定画面 -->
+  <section id="setup" class="box" hidden>
+    <h2>100マスのゴールをめざそう</h2>
+    <h2 id="setupTitle">あそぶ人をえらぼう</h2>
+    <div id="setupNote" class="stlist"></div>
+    <div id="srows"></div>
+    <div id="err"></div>
+    <button class="btn big" id="start" type="button">ゲームスタート</button>
+    <div class="acts"><button class="btn sub" id="setupBack" type="button">ホームにもどる</button></div>
+  </section>
+
+  <!-- ゲーム画面 -->
+  <section id="game" hidden>
+    <div id="vpw">
+      <div id="vp"><canvas id="board" width="320" height="968"></canvas></div>
+      <button class="btn sub" id="focus" type="button">現在地</button>
+      <div id="toast"></div>
+    </div>
+    <div id="netst" hidden></div>
+    <div id="ctl">
+      <canvas id="dice" width="16" height="16"></canvas>
+      <div id="turn">
+        <div class="who"><span class="chip" id="tchip"></span><span id="tname"></span></div>
+        <button class="btn" id="roll" type="button">サイコロをふる</button>
+      </div>
+    </div>
+    <div class="box" id="log"></div>
+    <div class="box" id="players"></div>
+    <div class="box" id="deck">
+      <div class="dk">
+        <canvas id="deckcv" width="28" height="36"></canvas>
+        <div class="dn">
+          <div class="dt">クイズカード</div>
+          <div class="dc">のこり<b id="quizLeft">100</b>枚</div>
+        </div>
+      </div>
+      <div class="dk">
+        <canvas id="deckcv2" width="28" height="36"></canvas>
+        <div class="dn">
+          <div class="dt">イベントカード</div>
+          <div class="dc">のこり<b id="eventLeft">30</b>枚</div>
+        </div>
+      </div>
+    </div>
+    <div class="box" hidden>   <!-- カード一覧(いまは非表示。hidden を消すと出る) -->
+      <details open>
+        <summary>クイズカードの表(100枚)</summary>
+        <div id="qsamples"></div>
+      </details>
+    </div>
+    <div class="box">
+      <details>
+        <summary>ミニゲームをためす(れんしゅう)</summary>
+        <p style="margin:6px 0">じぶんの番で、サイコロをふる前に あそべるよ。</p>
+        <div id="mgprac"></div>
+      </details>
+    </div>
+    <div class="box">
+      <details>
+        <summary>あそびかた</summary>
+        <p>サイコロをふって、スタートからゴール(100マスめ)をめざそう。盤面は上へ上へとのびているよ。ドラッグ・スワイプ・ホイールで上下にスライドして見られるよ(「現在地」ボタンで自分の位置にもどる)。ゴールはぴったりで止まらないと、あまった分だけもどされるよ(ただし、さいごの着順が決まった人は、ぴったりでなくてもゴールできるよ)。イベントや「戻る」で動いた先のマスの効果は発動しないよ。イベントマスではカードの効果が使われるよ(ミニゲームは成功・失敗で効果がかわる)。休みマスは1〜2回休み、戻るマスは2〜5マス戻り(マスの右下の数字)、サイコロ戻るマスはサイコロの目だけ戻るよ(1〜6マス)。</p>
+    <p>ポイント: ゴールの着順で 1着10P・2着5P・3着3P・4着1P。クイズに正解すると★の数だけ(★4なら4P、★1なら1P)。イベントのミニゲームに成功すると3P。ゴールした人も番がまわってきて、サイコロが2か5ならクイズカードを1まいひいて答えられるよ。全員がゴールしたら、ポイントがいちばん多い人の勝ちだよ。</p>
+        <p style="margin-bottom:4px">マスの種類</p>
+        <div id="kindlist"></div>
+      </details>
+      <div style="margin-top:10px"><button class="btn sub" id="menu" type="button">せっていにもどる</button></div>
+    </div>
+  </section>
+</div>
+
+<div id="quiz" hidden>
+  <div id="quizBox"></div>
+  <div id="quizHint"></div>
+  <button class="btn big" id="quizOk" type="button">つぎへ</button>
+</div>
+
+<div id="over" hidden>
+  <div class="box">
+    <h2 id="overT"></h2>
+    <div id="overNote" hidden>ホストが「もういちど」をおすのを まっているよ</div>
+    <div id="overList" class="stlist" style="text-align:left;display:inline-block;margin:0 0 14px"></div>
+    <div class="acts">
+      <button class="btn" id="again" type="button">もういちど</button>
+      <button class="btn sub" id="toMenu" type="button">せってい</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- 定数 ---------- */
+const W = 320, CELL = 30, ROWH = 30, GAP = 60, TOPH = 64, BOTH = 64, OX = 10;
+const H = TOPH + 10 * ROWH + 9 * GAP + BOTH;      // 968
+const GOAL = 99;                                   // 0 = スタート, 99 = ゴール(全100マス)
+const STAGE_LEN = 20;                              // 1ステージ = 20マス × 5ステージ
+const COLORS = ['#e63946', '#3a86ff', '#ffd23f', '#b05be8'];
+const rowY = r => TOPH + (9 - r) * (ROWH + GAP);   // 下(スタート)から上(ゴール)へ
+
+/* ステージ定義(色だけ。名前はなし) */
+const STAGES = [
+  { accent: '#2f6fd6', bg: '#1f3a73', road: '#8fb0e0',
+    pal: [['#c4dcff', '#e6f1ff', '#86a9de'], ['#b3cff5', '#dbeaff', '#7a9cd0']] },
+  { accent: '#d9822b', bg: '#7a4a1e', road: '#e8b878',
+    pal: [['#ffdca8', '#ffefd2', '#d9a766'], ['#f7cf94', '#ffe6bf', '#cc9a5a']] },
+  { accent: '#c2409a', bg: '#6b2459', road: '#e8a0d0',
+    pal: [['#f7c6e4', '#ffe3f3', '#d68fbb'], ['#eeb6da', '#fad6ec', '#c982b0']] },
+  { accent: '#1fa58a', bg: '#12594e', road: '#8fe0cc',
+    pal: [['#bdeee0', '#defaf2', '#7bc2ae'], ['#a9e3d2', '#cef5ea', '#6fb5a1']] },
+  { accent: '#666678', bg: '#2d2d3a', road: '#b0b0c0',
+    pal: [['#dcdcdc', '#f2f2f2', '#a0a0a0'], ['#cfcfcf', '#e8e8e8', '#929292']] }
+];
+const stageOf = i => Math.min(STAGES.length - 1, Math.floor(i / STAGE_LEN));
+
+/* マスの種類(多い順: クイズ > 普通 > イベント > 休み > 戻る・サイコロ戻る)
+   休み: 1〜2回休み / 戻る: 2〜5マス戻る / サイコロ戻る: サイコロの目(1〜6)だけ戻る
+   ※イベントマスのカードの効果は、まだ入れていない */
+const KINDS = {
+  quiz:   { label: 'クイズマス',   cols: ['#ffe066', '#fff1a8', '#d1a900'] },
+  normal: { label: '普通マス',     cols: null },                              // ステージごとの色
+  event:  { label: 'イベントマス', cols: ['#ff9f43', '#ffc88a', '#d17414'] },
+  skip:   { label: '休みマス(1〜2回休み)',        cols: ['#b9b9d9', '#dcdcf0', '#8585ad'] },
+  back:   { label: '戻るマス(2〜5マス戻る)',      cols: ['#ff7a7a', '#ffb0b0', '#d14a4a'] },
+  backdice: { label: 'サイコロ戻るマス(1〜6マス戻る)', cols: ['#ff7ac8', '#ffb3e0', '#d14aa0'] }
+};
+// 1ステージ(20マス)あたりの内訳。両端のステージは19マスなので普通マスで調整
+const KIND_COUNT = [['quiz', 7], ['normal', 6], ['event', 4], ['skip', 2], ['back', 1]];
+const CELL_KIND = [];                                // マス番号 → 種類(毎回おなじ配置)
+const CELL_VAL = [];                                 // マス番号 → 数(休み: 休む回数 / 戻る: 戻るマス数)
+const BACK_VALS = [2, 3, 5, 4, 3];                   // 戻るマスの数(ステージごと)
+(function layoutKinds() {
+  let seed = 20261011;
+  const rnd = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const special = k => k === 'skip' || k === 'back' || k === 'backdice';
+  CELL_KIND[0] = 'start'; CELL_KIND[GOAL] = 'goal';
+  for (let s = 0; s < STAGES.length; s++) {
+    const lo = Math.max(1, s * STAGE_LEN), hi = Math.min(GOAL - 1, (s + 1) * STAGE_LEN - 1);
+    const n = hi - lo + 1, arr = [];
+    KIND_COUNT.forEach(([k, c]) => { for (let j = 0; j < (k === 'normal' ? c - (STAGE_LEN - n) : c); j++) arr.push(k); });
+    // シャッフルして、休み/戻るが連続しない・同じ種類が3つ続かない配置を選ぶ
+    for (let t = 0; t < 1000; t++) {
+      for (let j = arr.length - 1; j > 0; j--) { const r = Math.floor(rnd() * (j + 1)); [arr[j], arr[r]] = [arr[r], arr[j]]; }
+      const seq = [CELL_KIND[lo - 1], ...arr];
+      let ok = !(lo === 1 && (special(arr[0]) || special(arr[1])));   // スタート直後はやさしく
+      for (let j = 1; ok && j < seq.length; j++) {
+        if (special(seq[j]) && special(seq[j - 1])) ok = false;
+        if (j >= 2 && seq[j] === seq[j - 1] && seq[j] === seq[j - 2]) ok = false;
+      }
+      if (ok) break;
+    }
+    arr.forEach((k, j) => { CELL_KIND[lo + j] = k; });
+  }
+  // サイコロ戻るマス: 各ステージの普通マスを1つ入れかえる(ほかのマスの配置はそのまま。となりが休み・戻るのマスは避ける)
+  let seed2 = 31415926;
+  const rnd2 = () => { seed2 = (Math.imul(seed2, 1664525) + 1013904223) >>> 0; return seed2 / 4294967296; };
+  for (let s = 0; s < STAGES.length; s++) {
+    const lo = Math.max(1, s * STAGE_LEN), hi = Math.min(GOAL - 1, (s + 1) * STAGE_LEN - 1);
+    let cand = [];
+    for (let i = Math.max(lo, 3); i <= hi; i++)
+      if (CELL_KIND[i] === 'normal' && !special(CELL_KIND[i - 1]) && !special(CELL_KIND[i + 1])) cand.push(i);
+    if (!cand.length) for (let i = Math.max(lo, 3); i <= hi; i++) if (CELL_KIND[i] === 'normal') cand.push(i);
+    CELL_KIND[cand[Math.floor(rnd2() * cand.length)]] = 'backdice';
+  }
+  // マスごとの数: 休みは1回と2回を1つずつ / 戻るはステージごとに決めた数
+  for (let s = 0; s < STAGES.length; s++) {
+    const lo = Math.max(1, s * STAGE_LEN), hi = Math.min(GOAL - 1, (s + 1) * STAGE_LEN - 1);
+    const vals = rnd2() < .5 ? [1, 2] : [2, 1];
+    let k = 0;
+    for (let i = lo; i <= hi; i++) {
+      if (CELL_KIND[i] === 'skip') CELL_VAL[i] = vals[k++ % vals.length];
+      else if (CELL_KIND[i] === 'back') CELL_VAL[i] = BACK_VALS[s];
+    }
+  }
+})();
+
+/* ---------- クイズカード(100枚 / 化学基礎) ----------
+   [問題, [選択肢4つ], 正解の番号(0はじまり), 難易度(1〜4 = ★〜★★★★)]  ※選択肢の位置は出題のたびにランダムに入れかわる */
+const QUIZ_RAW = [
+  // 1. 共有結合の結晶
+  ["原子が共有結合によって網目状に結びついた結晶を何というか。", ["分子結晶", "イオン結晶", "共有結合の結晶", "金属結晶"], 2, 1],
+  ["次のうち、共有結合の結晶であるものはどれか。", ["塩化ナトリウム", "氷", "ダイヤモンド", "鉄"], 2, 1],
+  ["ダイヤモンドの結晶中で、炭素原子1個は何個の他の炭素原子と共有結合しているか。", ["2個", "3個", "4個", "6個"], 2, 2],
+  ["次のうち、共有結合の結晶でありながら電気をよく導く物質はどれか。", ["ダイヤモンド", "黒鉛（グラファイト）", "二酸化ケイ素", "ケイ素"], 1, 2],
+  ["黒鉛の結晶についての説明として正しいものはどれか。", ["炭素原子が正四面体型に結合している。", "層状構造をしており、層の間は共有結合で強く結ばれている。", "炭素原子が平面上で正六角形を並べた層をつくり、層の間は弱い力で結ばれている。", "非常に硬く、ダイヤモンドと同様に削ることが難しい。"], 2, 3],
+  ["二酸化ケイ素（SiO₂）の結晶において、ケイ素原子1個は何個の酸素原子と共有結合しているか。", ["1個", "2個", "3個", "4個"], 3, 3],
+  ["共有結合の結晶についての説明として、一般に誤っているものはどれか。", ["融点が非常に高いものが多い。", "ダイヤモンドや二酸化ケイ素は硬い。", "水や一般的な有機溶媒によく溶けるものが多い。", "黒鉛など一部の例外を除き、電気を通しにくいものが多い。"], 2, 4],
+  ["水晶や石英の主成分であり、ガラスの主成分でもある物質の化学式はどれか。", ["CO₂", "SiO₂", "H₂O", "C"], 1, 1],
+  ["ダイヤモンドと黒鉛のように、同じ元素からなる単体で性質が異なるものを互いに何というか。", ["同位体", "同素体", "異性体", "官能基"], 1, 2],
+  ["ダイヤモンドの結晶が非常に硬い理由として正しいものはどれか。", ["すべての炭素原子が分子間力で結ばれているから。", "自由電子が結晶全体を自由に動き回っているから。", "炭素原子間が強い共有結合で三次元的な網目状に結びついているから。", "イオン同士の静電気力が非常に強いから。"], 2, 3],
+  ["ケイ素（Si）の結晶構造は、どの物質の結晶構造と基本的に同じか。", ["ダイヤモンド", "塩化ナトリウム", "氷", "銅"], 0, 4],
+  ["石英（二酸化ケイ素）の性質について正しいものはどれか。", ["融点が低く、簡単に溶ける。", "硬く、融点が高い。", "やわらかく、簡単に削れる。", "電気を非常によく導く。"], 1, 2],
+  // 2. 金属結合と金属結晶
+  ["金属の結晶中で、金属原子に由来する陽イオンと自由電子を結びつけている結合を何というか。", ["イオン結合", "共有結合", "金属結合", "水素結合"], 2, 1],
+  ["金属結晶中を移動できる電子を何というか。", ["価電子", "自由電子", "共有電子対", "内殻電子"], 1, 1],
+  ["金属の電気伝導性や熱伝導性の主な原因となるものはどれか。", ["陽イオン同士の反発", "自由電子の存在", "強い共有結合の網目構造", "イオン間の静電気力だけ"], 1, 2],
+  ["金属に力を加えたとき、割れずに薄く広がる性質を何というか。", ["延性", "展性", "揮発性", "昇華性"], 1, 2],
+  ["金属を引き延ばして細い線状にする性質を何というか。", ["展性", "延性", "弾性", "導電性"], 1, 3],
+  ["金属結晶の代表的な構造のうち、原子の充填率が最も高いものの組み合わせはどれか。", ["体心立方格子と単純立方格子", "面心立方格子と六方最密構造", "体心立方格子と面心立方格子", "単純立方格子のみ"], 1, 3],
+  ["常温で体心立方格子をとる金属はどれか。", ["銅（Cu）", "アルミニウム（Al）", "ナトリウム（Na）", "銀（Ag）"], 2, 4],
+  ["常温で面心立方格子をとる金属はどれか。", ["鉄（α-Fe）", "カリウム（K）", "銅（Cu）", "マグネシウム（Mg）"], 2, 4],
+  ["金属結晶を構成する粒子についての説明として最も適切なものはどれか。", ["金属陽イオンと自由電子", "金属陰イオンだけ", "中性分子だけ", "陽イオンと陰イオンが交互に並んだもの"], 0, 1],
+  ["金属が金属光沢を示す理由として、最も適切な説明はどれか。", ["光をすべて吸収し、透過させるから。", "金属中の自由電子が光と相互作用し、光を反射するため。", "陽イオンが光を発生させ続けるから。", "共有電子対が発光するから。"], 1, 2],
+  ["金属が電気や熱をよく導く理由として正しいものはどれか。", ["自由電子が移動して電荷やエネルギーを運ぶから。", "イオンが結晶中を自由に移動するから。", "電子が固定されて動かないから。", "陽イオン同士が直接衝突するから。"], 0, 3],
+  ["面心立方格子の単位格子に含まれる実効的な原子数はいくつか。", ["1個", "2個", "4個", "8個"], 2, 4],
+  ["体心立方格子の単位格子に含まれる実効的な原子数はいくつか。", ["1個", "2個", "4個", "8個"], 1, 4],
+  // 3. 金属の利用
+  ["鉄を主成分とし、炭素を含む、建築や機械などに広く使われる合金を何というか。", ["黄銅", "鋼（こう）", "青銅", "ジュラルミン"], 1, 1],
+  ["銅と亜鉛の合金で、五円硬貨などに使われているものはどれか。", ["青銅", "黄銅（真鍮）", "白銅", "ステンレス鋼"], 1, 1],
+  ["銅とスズの合金で、銅鐸や彫刻などに古くから使われてきたものはどれか。", ["黄銅", "青銅（ブロンズ）", "ニッケルクロム鋼", "ジュラルミン"], 1, 2],
+  ["アルミニウムを主成分とし、軽くて強いため航空機の部材などに使われてきた合金はどれか。", ["ステンレス鋼", "ジュラルミン", "黄銅", "アマルガム"], 1, 2],
+  ["鉄にクロムなどを加え、さびにくくした合金を何というか。", ["黄銅", "青銅", "ステンレス鋼", "ジュラルミン"], 2, 3],
+  ["水銀と他の金属との合金を総称して何というか。", ["アマルガム", "ハンダ", "ピューター", "洋銀"], 0, 3],
+  ["ボーキサイトを主な原料として、工業的に製造される金属はどれか。", ["鉄", "銅", "アルミニウム", "亜鉛"], 2, 4],
+  ["常温・常圧で液体である金属はどれか。", ["銅", "水銀", "ナトリウム", "鉛"], 1, 1],
+  ["純金属の中で電気伝導性が特に高い2つの金属の組み合わせはどれか。", ["鉄とアルミニウム", "銀と銅", "鉛とスズ", "亜鉛と金"], 1, 2],
+  ["アルミニウムの表面に酸化物の皮膜を人工的につくり、耐食性などを高める処理を何というか。", ["メッキ", "アルマイト加工（陽極酸化処理）", "ガルバニ処理", "焼入れ"], 1, 3],
+  ["銅の電解精錬で、陽極泥から回収されることがある貴重な金属の組み合わせはどれか。", ["鉄とアルミニウム", "金や銀など", "ナトリウムとカリウム", "マグネシウムとカルシウム"], 1, 4],
+  ["高炉で鉄鉱石を還元して得られる、炭素を多く含む鉄を何というか。", ["鋼", "銑鉄", "錬鉄", "ステンレス鋼"], 1, 4],
+  // 4. 化学結合と物質の分類
+  ["電子を失って陽イオンになりやすい性質を何というか。", ["陰性", "金属性", "揮発性", "放射性"], 1, 1],
+  ["周期表の右上に多い非金属元素に見られ、電子を受け取ったり共有したりしやすい性質に関係する分類はどれか。", ["金属性", "非金属性", "触媒性", "延性"], 1, 1],
+  ["陽イオンと陰イオンが静電気力によって引き合うことでできる結合を何というか。", ["共有結合", "イオン結合", "金属結合", "水素結合"], 1, 2],
+  ["次のうち、イオン結晶であるものはどれか。", ["水（H₂O）", "塩化ナトリウム（NaCl）", "二酸化炭素（CO₂）", "銅（Cu）"], 1, 2],
+  ["次のうち、分子からなる物質の組み合わせはどれか。", ["塩化ナトリウム、酸化マグネシウム", "ダイヤモンド、二酸化ケイ素", "水、ドライアイス（二酸化炭素）", "鉄、アルミニウム"], 2, 3],
+  ["結合や粒子間にはたらく力についての一般的な説明として正しいものはどれか。", ["分子間力は、一般に共有結合より強い。", "イオン結晶では、イオン間の静電気的な引力が結晶を保っている。", "金属結合は、どの物質でも必ずイオン結合より強い。", "分子間力は、常に金属結合より強い。"], 1, 3],
+  ["次のうち、気体の状態で電気をほとんど導かないものはどれか。", ["銅（Cu）の固体", "塩化ナトリウム水溶液", "塩化水素（HCl）の気体", "水酸化ナトリウムの融解液"], 2, 4],
+  ["次のうち、単体ではなく化合物に分類されるものはどれか。", ["酸素（O₂）", "窒素（N₂）", "水（H₂O）", "鉄（Fe）"], 2, 1],
+  ["原子同士が電子を共有することによってできる結合を何というか。", ["イオン結合", "共有結合", "金属結合", "静電気結合"], 1, 2],
+  ["次のうち、結晶中に分子が存在しない物質はどれか。", ["アンモニア", "メタン", "塩化カルシウム", "エタノール"], 2, 3],
+  ["次のうち、物質の分類と結合の組み合わせとして正しいものはどれか。", ["ダイヤモンド ― イオン結合からなる結晶", "塩化ナトリウム ― 共有結合からなる分子結晶", "アンモニア ― 共有結合でできた分子からなる物質", "鉄 ― イオン結晶"], 2, 4],
+  ["原子が電子を失ったり受け取ったりして、希ガスと同じ電子配置になることを何というか。", ["貴ガス型電子配置になること", "アボガドロの法則", "ボイルの法則", "中和反応"], 0, 2],
+  ["次のうち、極性分子であるものはどれか。", ["メタン（CH₄）", "二酸化炭素（CO₂）", "水（H₂O）", "水素（H₂）"], 2, 3],
+  // 5. 原子量・分子量・式量
+  ["元素を構成する原子の相対質量を、天然に存在する同位体の存在比を考慮して平均した値を何というか。", ["分子量", "原子量", "式量", "質量数"], 1, 1],
+  ["分子を構成するすべての原子の原子量の総和を何というか。", ["式量", "分子量", "質量数", "アボガドロ定数"], 1, 1],
+  ["イオン結晶など、分子をつくらない物質について、組成式に含まれる原子の原子量を合計した値を何というか。", ["分子量", "原子量", "式量", "モル濃度"], 2, 2],
+  ["酸素分子 O₂ の分子量はいくらか（O＝16）。", ["16", "32", "48", "64"], 1, 2],
+  ["水 H₂O の分子量はいくらか（H＝1.0、O＝16）。", ["17", "18", "19", "20"], 1, 3],
+  ["塩化ナトリウム NaCl の式量はいくらか（Na＝23、Cl＝35.5）。", ["35.5", "48.5", "58.5", "60.0"], 2, 3],
+  ["二酸化炭素 CO₂ の分子量はいくらか（C＝12、O＝16）。", ["28", "32", "44", "48"], 2, 4],
+  ["硫酸銅(II)五水和物 CuSO₄・5H₂O の式量はいくらか（H＝1.0、O＝16、S＝32、Cu＝63.5）。", ["159.5", "200.0", "249.5", "260.0"], 2, 4],
+  ["同位体が存在する元素の原子量が整数にならない場合がある理由として正しいものはどれか。", ["電子の質量が大きいため。", "天然に存在する同位体の存在比を考慮した平均値だから。", "温度によって原子の質量が大きく変化するから。", "すべての原子核が崩壊しているから。"], 1, 1],
+  ["アンモニア NH₃ の分子量はいくらか（H＝1.0、N＝14）。", ["15", "16", "17", "18"], 2, 2],
+  ["グルコース C₆H₁₂O₆ の分子量はいくらか（H＝1.0、C＝12、O＝16）。", ["150", "180", "200", "342"], 1, 3],
+  ["炭酸カルシウム CaCO₃ の式量はいくらか（Ca＝40、C＝12、O＝16）。", ["68", "84", "100", "116"], 2, 4],
+  // 6. 物質量と粒子の数
+  ["物質量の単位を表す記号はどれか。", ["g", "L", "mol", "atom"], 2, 1],
+  ["1 mol あたりに含まれる粒子数を表すアボガドロ定数の値として適切なものはどれか。", ["6.02 × 10²² mol⁻¹", "6.02 × 10²³ mol⁻¹", "3.01 × 10²³ mol⁻¹", "1.00 × 10²⁴ mol⁻¹"], 1, 1],
+  ["2.0 mol の水 H₂O に含まれる水分子の数はいくつか（アボガドロ定数を 6.02 × 10²³ mol⁻¹ とする）。", ["6.02 × 10²³ 個", "1.20 × 10²⁴ 個", "3.01 × 10²³ 個", "1.80 × 10²⁴ 個"], 1, 2],
+  ["6.02 × 10²³ 個の水素分子 H₂ は何 mol か。", ["0.50 mol", "1.0 mol", "2.0 mol", "6.02 mol"], 1, 2],
+  ["1.0 mol の二酸化炭素 CO₂ に含まれる酸素原子の総数はいくつか。", ["6.02 × 10²³ 個", "1.20 × 10²⁴ 個", "1.80 × 10²⁴ 個", "3.01 × 10²³ 個"], 1, 3],
+  ["0.50 mol のメタン CH₄ に含まれる水素原子の数はいくつか。", ["6.02 × 10²³ 個", "1.20 × 10²⁴ 個", "3.01 × 10²³ 個", "2.41 × 10²⁴ 個"], 1, 3],
+  ["6.02 × 10²² 個のアルミニウム原子は何 mol か。", ["0.05 mol", "0.10 mol", "0.50 mol", "1.0 mol"], 1, 4],
+  ["原子や分子などの粒子の数をまとめて扱う量を何というか。", ["質量数", "物質量", "モル濃度", "原子量"], 1, 1],
+  ["1.5 mol のアンモニア NH₃ に含まれる分子の数はいくつか。", ["6.02 × 10²³ 個", "9.03 × 10²³ 個", "1.20 × 10²⁴ 個", "3.01 × 10²³ 個"], 1, 2],
+  ["1.20 × 10²⁴ 個の銅原子は何 mol か。", ["1.0 mol", "2.0 mol", "3.0 mol", "6.0 mol"], 1, 3],
+  ["0.20 mol の塩化カルシウム CaCl₂ に含まれる塩化物イオン Cl⁻ の数はいくつか。", ["1.20 × 10²³ 個", "2.41 × 10²³ 個", "6.02 × 10²³ 個", "1.20 × 10²⁴ 個"], 1, 4],
+  ["ある気体 0.40 mol に含まれる分子の数はいくつか。", ["2.41 × 10²³ 個", "6.02 × 10²³ 個", "1.20 × 10²³ 個", "3.01 × 10²³ 個"], 0, 4],
+  ["アボガドロ定数の単位として正しいものはどれか。", ["mol", "mol⁻¹", "g/mol", "L/mol"], 1, 3],
+  // 7. 物質量と質量
+  ["物質1 molあたりの質量を何というか（単位は g/mol）。", ["分子量", "モル質量", "原子量", "式量"], 1, 1],
+  ["炭素原子 C のモル質量はいくらか（C＝12）。", ["1.0 g/mol", "12 g/mol", "12 g", "6.02 × 10²³ g/mol"], 1, 1],
+  ["水 H₂O 1.0 mol の質量は何 g か（H＝1.0、O＝16）。", ["9.0 g", "17 g", "18 g", "34 g"], 2, 2],
+  ["二酸化炭素 CO₂ 0.50 mol の質量は何 g か（C＝12、O＝16）。", ["11 g", "22 g", "44 g", "88 g"], 1, 2],
+  ["窒素分子 N₂ 7.0 g の物質量は何 mol か（N＝14）。", ["0.25 mol", "0.50 mol", "1.0 mol", "2.0 mol"], 0, 3],
+  ["水酸化ナトリウム NaOH 40 g は何 mol か（Na＝23、O＝16、H＝1.0）。", ["0.50 mol", "1.0 mol", "2.0 mol", "4.0 mol"], 1, 3],
+  ["銅 Cu 3.2 g に含まれる銅原子の物質量は何 mol か（Cu＝63.5）。", ["0.010 mol", "0.050 mol", "0.10 mol", "0.50 mol"], 1, 4],
+  ["グルコース C₆H₁₂O₆ 9.0 g の物質量は何 mol か（H＝1.0、C＝12、O＝16）。", ["0.050 mol", "0.10 mol", "0.50 mol", "1.0 mol"], 0, 4],
+  ["質量（g）をモル質量（g/mol）で割ると、何を求められるか。", ["粒子の数", "体積", "物質量（mol）", "モル濃度"], 2, 1],
+  ["ネオン Ne 2.0 mol の質量は何 g か（Ne＝20）。", ["10 g", "20 g", "40 g", "80 g"], 2, 2],
+  ["アンモニア NH₃ 3.4 g の物質量は何 mol か（H＝1.0、N＝14）。", ["0.10 mol", "0.20 mol", "0.50 mol", "2.0 mol"], 1, 3],
+  ["塩化カルシウム CaCl₂ 11.1 g に含まれるカルシウムイオン Ca²⁺ の物質量は何 mol か（Ca＝40、Cl＝35.5）。", ["0.050 mol", "0.10 mol", "0.20 mol", "1.0 mol"], 1, 4],
+  // 8. 物質量と気体の体積
+  ["0℃、1 atm（約101.3 kPa）の条件で、気体1 molが占める体積は約何 L か。", ["1.00 L", "11.2 L", "22.4 L", "44.8 L"], 2, 1],
+  ["0℃、1 atmで、酸素 O₂ 2.0 mol が占める体積は何 L か。", ["11.2 L", "22.4 L", "33.6 L", "44.8 L"], 3, 1],
+  ["0℃、1 atmで、二酸化炭素 CO₂ 11.2 L の物質量は何 mol か。", ["0.25 mol", "0.50 mol", "1.0 mol", "2.0 mol"], 1, 2],
+  ["0℃、1 atmで、水素 H₂ 5.6 L の質量は何 g か（H＝1.0）。", ["0.25 g", "0.50 g", "1.0 g", "2.0 g"], 1, 2],
+  ["0℃、1 atmで、アンモニア NH₃ 6.72 L の物質量は何 mol か。", ["0.15 mol", "0.30 mol", "0.50 mol", "1.5 mol"], 1, 3],
+  ["0℃、1 atmで、メタン CH₄ 2.24 L に含まれるメタン分子の数はいくつか。", ["6.02 × 10²² 個", "6.02 × 10²³ 個", "3.01 × 10²² 個", "1.20 × 10²³ 個"], 0, 3],
+  ["0℃、1 atmで、密度が1.25 g/Lである気体のモル質量に対応する相対分子質量はいくらか。モル体積を22.4 L/molとする。", ["約16", "約28", "約32", "約44"], 1, 4],
+  ["同温・同圧のもとで、気体の体積は物質量に比例するという法則を何というか。", ["ボイルの法則", "シャルルの法則", "アボガドロの法則", "ヘンリーの法則"], 2, 4],
+  ["0℃、1 atmで、気体の体積（L）を22.4 L/molで割ると何を求められるか。", ["質量", "物質量（mol）", "分子量", "アボガドロ定数"], 1, 1],
+  ["0℃、1 atmで、窒素 N₂ 44.8 L の質量は何 g か（N＝14）。", ["14 g", "28 g", "56 g", "112 g"], 2, 2],
+  ["0℃、1 atmで、1.4 gの一酸化炭素 CO が占める体積は何 L か（C＝12、O＝16）。", ["0.56 L", "1.12 L", "2.24 L", "11.2 L"], 1, 3],
+  ["分子量が64の気体について、0℃、1 atmでの密度として最も近いものはどれか。モル体積を22.4 L/molとする。", ["1.43 g/L", "2.29 g/L", "2.86 g/L", "3.12 g/L"], 2, 4],
+  ["0℃、1 atmでの気体の密度について正しいものはどれか。", ["すべての気体は種類によらず同じ密度を持つ。", "気体の密度（g/L）は、モル質量（g/mol）をモル体積（L/mol）で割ると求められる。", "分子量が大きい気体ほど、密度は小さくなる。", "同じ温度で圧力を高くすると、気体の密度は必ず小さくなる。"], 1, 4],
+];
+/* イベントカード(全30枚 / 化学基礎) [名前, 内容, 効果の種類, 数]
+   効果の種類: 'f' = 数マス進む / 'b' = 数マス戻る / 'r' = 数回休み。効果は applyEvent() で実行する */
+const EVENT_RAW = [
+  ["ダイヤモンドの硬さ", "ダイヤモンドの強固な結合に感銘を受けた！", "f", 3],
+  ["黒鉛の層状構造", "黒鉛の層と層の間は弱い力で結びついているため、層が剥がれやすい。この性質を利用して鉛筆の芯として使われている！", "f", 1],
+  ["二酸化ケイ素の迷宮", "二酸化ケイ素の結晶は、原子が共有結合で網目状につながった構造をしている。その複雑な網目構造の中で迷子になってしまった…。", "r", 1],
+  ["自由電子のきらめき", "金属中の自由電子が光を反射してピカピカに光り輝いた！", "f", 2],
+  ["金属の展性", "金属結晶の展性を活かして、板状に薄く広げることに成功した！", "f", 2],
+  ["結晶格子の試練", "体心立方格子の充填率の計算に苦戦して足が止まった…。", "b", 1],
+  ["ステンレスの防錆", "ステンレスに含まれるクロムが表面に保護性の酸化皮膜をつくり、錆びにくくする性質を学んだ！", "f", 2],
+  ["ジュラルミンの飛行", "ジュラルミンの軽さと強さが、航空機の機体材料として役立っている！", "f", 3],
+  ["水銀のヒヤリハット", "水銀の有害性を知らずに取り扱おうとしてしまった！危険性を学び、安全な取り扱いの大切さを再確認した。", "r", 1],
+  ["イオン結合の引き合い", "陽イオンと陰イオンが静電気力によって引き合い、イオン結合をつくっていることを理解した！", "f", 2],
+  ["物質の分類ミス", "単体と化合物の仕分けを間違えて混乱した…。", "b", 1],
+  ["共有結合の発見", "原子同士が電子を共有して共有結合をつくる仕組みを理解し、気分爽快になった！", "f", 1],
+  ["モル質量の計算", "モル質量と原子量・分子量・式量の関係を理解してスピードアップ！", "f", 3],
+  ["硫酸銅の罠", "硫酸銅五水和物の式量を計算するときに、結晶水5H₂Oの分を足し忘れた…。", "b", 2],
+  ["アボガドロの迷い", "1 molに約6.02×10²³個もの粒子が含まれることに圧倒され、計算の手が止まってしまった…。", "r", 1],
+  ["粒子の数え上げ", "2 molの水に含まれる水分子の数を一瞬で計算しきった！", "f", 2],
+  ["粒子数の数え違い", "物質量から粒子数を求める計算で、アボガドロ定数を掛け忘れてしまった…。", "b", 1],
+  ["イオン数の勘違い", "塩化カルシウムCaCl₂から生じる塩化物イオンCl⁻の数を数え間違えた…。", "b", 1],
+  ["グラムからモルへ", "質量（g）をモル質量（g/mol）で割り、物質量（mol）を求めることに成功した！", "f", 3],
+  ["端数の計算ミス", "モル質量の割り算で端数の処理を盛大にミスした…。", "b", 1],
+  ["水酸化ナトリウムの秤量", "モル質量が40 g/molである水酸化ナトリウムNaOHを40 g、素早く正確にはかり取った！", "f", 2],
+  ["標準状態の突破", "0℃・約1.013×10⁵ Pa（1 atm）での気体のモル体積22.4 L/molを使いこなし、華麗に計算を解いた！", "f", 3],
+  ["条件の見落とし", "気体の体積問題で、温度と圧力の条件を見落として足止めされた…。", "b", 2],
+  ["密度のひらめき", "標準状態での気体の密度とモル体積22.4 L/molを利用し、モル質量を求める方法をひらめいた！", "f", 3],
+  ["テスト高得点", "化学基礎の範囲を学び、小テストで満点を取った！", "f", 3],
+  ["元素記号のド忘れ", "突然、基本の元素記号が思い出せなくなって頭が真っ白になった…。", "r", 1],
+  ["オクテット則の安定", "原子が電子を受け取ったり失ったりして、希ガスに似た安定な電子配置になる仕組みを理解した！", "f", 2],
+  ["自由電子のノリ", "金属中を移動する自由電子の働きを混同し、金属の電気伝導性の説明に失敗した…。", "b", 1],
+  ["同素体の共演", "ダイヤモンドと黒鉛という、同じ炭素からなる同素体の違いを見事に説明できた！", "f", 3],
+  ["化学研究室の大発見", "すごろく上の化学実験室で素晴らしい発見をして一気に前進！", "f", 4],
+];
+/* イベントカードのミニゲーム(カード番号 → 内容)。ここにないカードは、書かれた効果がそのまま起こる
+   進むカード: せいこうで進む(しっぱいはその場) / 戻る・休みカード: せいこうでセーフ(しっぱいで効果)
+   t: timing(タイミング) / mash(連打) / pour(そそぐ) / sort(仕分け) / pairs(組み合わせ) / quiz(4択・qsからランダム) */
+const EVENT_GAMES = {
+  4:  { t: 'timing', tip: 'マーカーが緑のゾーンに入った瞬間に「ストップ!」。自由電子が光を反射するタイミングをつかもう', need: 1, zone: .18, speed: .9 },
+  5:  { t: 'mash', tip: '「たたく!」を連打して金属をたたき、薄く広げよう(ゲージがいっぱいでせいこう)', emo: '🔨', btn: 'たたく!', msg: 'のびぐあい', spin: false },
+  21: { t: 'pour', tip: '「おして のせる」をおしている間、NaOHの量がふえるよ。赤い線の 40 g にぴったり合わせて、はなそう(こえたらしっぱい)', mark: '40 g', btn: 'おして のせる', msg: 'おしている間、NaOHがふえるよ', low: 'まだ 40 g にたりないよ。もうすこし!', over: '40 g をこえちゃった…' },
+  11: { t: 'sort', tip: '出てくる物質が「単体」か「化合物」か、すばやく仕分けよう(6こ中5こ正解でせいこう)', cats: ['単体', '化合物'], count: 6, need: 5, items: [["酸素 O₂", 0], ["窒素 N₂", 0], ["鉄 Fe", 0], ["銅 Cu", 0], ["水素 H₂", 0], ["ヘリウム He", 0], ["ダイヤモンド C", 0], ["ナトリウム Na", 0], ["水 H₂O", 1], ["二酸化炭素 CO₂", 1], ["塩化ナトリウム NaCl", 1], ["アンモニア NH₃", 1], ["メタン CH₄", 1], ["塩化水素 HCl", 1], ["炭酸カルシウム CaCO₃", 1], ["酸化マグネシウム MgO", 1]] },
+  26: { t: 'pairs', tip: '元素記号と元素名を、ひだりとみぎで1つずつタップして組み合わせよう(3回まちがえるとしっぱい)', pick: 4, miss: 3, pairs: [["H", "水素"], ["C", "炭素"], ["N", "窒素"], ["O", "酸素"], ["Na", "ナトリウム"], ["Mg", "マグネシウム"], ["Al", "アルミニウム"], ["Cl", "塩素"], ["K", "カリウム"], ["Ca", "カルシウム"], ["Fe", "鉄"], ["Cu", "銅"]] },
+  29: { t: 'pairs', tip: '同じ元素からできる単体どうし(同素体)を、元素と組み合わせよう(3回まちがえるとしっぱい)', pick: 4, miss: 3, pairs: [["炭素 C", "ダイヤモンドと黒鉛"], ["酸素 O", "酸素(O₂)とオゾン(O₃)"], ["硫黄 S", "斜方硫黄・単斜硫黄など"], ["リン P", "黄リンと赤リン"]] },
+  13: { t: 'quiz', qs: [
+    { q: "炭素原子 C(原子量 12)のモル質量は?", c: ["12 g/mol", "12 g", "24 g/mol", "6.0 g/mol"], a: 0 },
+    { q: "水 H₂O のモル質量は?(H＝1.0、O＝16)", c: ["16 g/mol", "17 g/mol", "18 g/mol", "20 g/mol"], a: 2 },
+    { q: "二酸化炭素 CO₂ のモル質量は?(C＝12、O＝16)", c: ["28 g/mol", "32 g/mol", "44 g/mol", "56 g/mol"], a: 2 }
+  ] },
+  22: { t: 'quiz', qs: [
+    { q: "0℃、1 atm で、酸素 O₂ 0.50 mol が占める体積は?", c: ["5.6 L", "11.2 L", "22.4 L", "44.8 L"], a: 1 },
+    { q: "0℃、1 atm で、窒素 N₂ 44.8 L の物質量は?", c: ["0.50 mol", "1.0 mol", "2.0 mol", "4.0 mol"], a: 2 },
+    { q: "0℃、1 atm で、水素 H₂ 11.2 L の物質量は?", c: ["0.25 mol", "0.50 mol", "1.0 mol", "2.0 mol"], a: 1 }
+  ] },
+  16: { t: 'quiz', qs: [
+    { q: "2.0 mol の水 H₂O に含まれる水分子の数は?(アボガドロ定数 6.02×10²³ /mol)", c: ["6.02×10²³ 個", "1.20×10²⁴ 個", "3.01×10²³ 個", "1.80×10²⁴ 個"], a: 1 },
+    { q: "0.50 mol の酸素分子 O₂ に含まれる分子の数は?", c: ["3.01×10²³ 個", "6.02×10²³ 個", "1.20×10²⁴ 個", "1.51×10²³ 個"], a: 0 },
+    { q: "3.01×10²³ 個の水分子は何 mol?", c: ["0.25 mol", "0.50 mol", "1.0 mol", "2.0 mol"], a: 1 }
+  ] },
+  14: { t: 'quiz', qs: [
+    { q: "硫酸銅(Ⅱ)五水和物 CuSO₄・5H₂O の式量は?(H＝1.0、O＝16、S＝32、Cu＝63.5)", c: ["159.5", "177.5", "249.5", "339.5"], a: 2 },
+    { q: "CuSO₄・5H₂O の結晶水 5H₂O 部分の式量の合計は?(H＝1.0、O＝16)", c: ["18", "45", "90", "180"], a: 2 }
+  ] },
+  18: { t: 'quiz', qs: [
+    { q: "CaCl₂ 1.0 mol を水に溶かすと、塩化物イオン Cl⁻ は何 mol 生じる?", c: ["0.50 mol", "1.0 mol", "2.0 mol", "3.0 mol"], a: 2 },
+    { q: "CaCl₂ 0.50 mol に含まれる Cl⁻ の物質量は?", c: ["0.25 mol", "0.50 mol", "1.0 mol", "1.5 mol"], a: 2 },
+    { q: "NaCl 1.0 mol に含まれるイオンの物質量は?", c: ["Na⁺ 1.0 mol、Cl⁻ 1.0 mol", "Na⁺ 1.0 mol、Cl⁻ 2.0 mol", "Na⁺ 2.0 mol、Cl⁻ 1.0 mol", "Na⁺ 0.5 mol、Cl⁻ 0.5 mol"], a: 0 }
+  ] },
+  9:  { t: 'quiz', qs: [
+    { q: "水銀を床にこぼしてしまった。正しい対応はどれ?", c: ["素手で集める", "掃除機で吸い取る", "さわらずに、すぐ先生に知らせる", "見なかったことにして立ち去る"], a: 2 },
+    { q: "水銀について正しい説明はどれ?", c: ["蒸気も含めて有害なので、換気と安全な取り扱いが必要", "常温の液体なので、まったく無害", "においがないので、素手でさわっても安全", "水に溶けるので、水で流せば問題ない"], a: 0 }
+  ] },
+  15: { t: 'quiz', qs: [
+    { q: "アボガドロ定数の値として最も適切なものは?", c: ["6.02×10²² /mol", "6.02×10²³ /mol", "6.02×10²⁴ /mol", "3.01×10²³ /mol"], a: 1 },
+    { q: "物質 1 mol に含まれる粒子の数について正しいものは?", c: ["物質の種類によって大きく変わる", "物質の種類によらず、すべて同じ(約6.02×10²³個)", "気体のときだけ約6.02×10²³個", "固体のときだけ約6.02×10²³個"], a: 1 }
+  ] }
+};
+const EVENT_CARDS = EVENT_RAW.map(([name, text, kind, n], i) => {
+  const id = i + 1, base = kind === 'f' ? n + 'マス進む' : kind === 'b' ? n + 'マス戻る' : n + '回休み';
+  const effect = !EVENT_GAMES[id] ? base + '。'
+    : kind === 'f' ? 'ミニゲームに成功すると' + base + '。失敗するとその場にとどまる。'
+    : 'ミニゲームに失敗すると' + base + '。成功すればセーフ!';
+  return { id, name, text, kind, n, effect };
+});
+/* 全100枚 */
+const QUIZ_CARDS = QUIZ_RAW.map(([q, c, a, lv], i) => ({ id: i + 1, q, c, a, lv }));
+
+/* ---------- ドットフォント(3x5) ---------- */
+const FONT = {
+  '0': ['111','101','101','101','111'], '1': ['010','110','010','010','111'],
+  '2': ['111','001','111','100','111'], '3': ['111','001','111','001','111'],
+  '4': ['101','101','111','001','001'], '5': ['111','100','111','001','111'],
+  '6': ['111','100','111','101','111'], '7': ['111','001','001','001','001'],
+  '8': ['111','101','111','101','111'], '9': ['111','101','111','001','111'],
+  '+': ['000','010','111','010','000'], '-': ['000','000','111','000','000'],
+  '=': ['000','111','000','111','000'],
+  'S': ['111','100','111','001','111'], 'G': ['111','100','101','101','111'],
+  'H': ['101','101','111','101','101'], 'E': ['111','100','111','100','111'],
+  'L': ['100','100','100','100','111'], 'I': ['111','010','010','010','111'],
+  'C': ['111','100','100','100','111'], 'N': ['111','101','101','101','101'],
+  'O': ['111','101','101','101','111'], 'A': ['010','101','111','101','101'],
+  'F': ['111','100','111','100','100'], 'U': ['101','101','101','101','111'],
+  'P': ['111','101','111','100','100'], 'T': ['111','010','010','010','010'],
+  'M': ['101','111','111','101','101'], 'R': ['111','101','111','110','101'],
+  'V': ['101','101','101','101','010'], 'B': ['110','101','110','101','110']
+};
+function txt(c, s, x, y, col, sc = 1) {
+  for (const ch of String(s)) {
+    const g = FONT[ch];
+    if (g) for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++)
+      if (g[j][i] === '1') { c.fillStyle = col; c.fillRect(x + i * sc, y + j * sc, sc, sc); }
+    x += 4 * sc;
+  }
+}
+function txtC(c, s, cx, cy, col, sc = 1, shadow = false) {
+  const w = String(s).length * 4 * sc - sc;
+  const x = Math.round(cx - w / 2), y = Math.round(cy - 5 * sc / 2);
+  if (shadow) txt(c, s, x + sc, y + sc, '#000', sc);
+  txt(c, s, x, y, col, sc);
+}
+
+/* ---------- ドット絵スプライト(駒・アイコン) ---------- */
+const PAWN = [
+  '..1111..',
+  '.133331.',
+  '.133331.',
+  '..1111..',
+  '.122221.',
+  '12222221',
+  '12222221',
+  '.122221.',
+  '.11..11.'
+];
+const ICON_QUIZ = ['.111.','1...1','....1','...1.','..1..','.....','..1..'];
+const ICON_BACK = ['...1...','..11...','.111111','1111111','.111111','..11...','...1...'];
+const ICON_DICE = ['1111111','1.....1','1.1.1.1','1.....1','1.1.1.1','1.....1','1111111'];
+const ICON_WAIT = ['1111111','.11111.','..111..','...1...','..111..','.11111.','1111111'];
+const ICON_STAR = ['...1...','...1...','1111111','.11111.','..111..','.11.11.','.1...1.'];
+const FLAG = ['21111...','211111..','21111...','2.......','2.......','2.......','2.......','2.......'];
+const KIND_ICON = { quiz: ICON_QUIZ, event: ICON_STAR, skip: ICON_WAIT, back: ICON_BACK, backdice: ICON_DICE };   // 普通マスは絵なし
+
+function spr(c, rows, x, y, pal) {
+  x = Math.round(x); y = Math.round(y);
+  rows.forEach((row, j) => {
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '.') continue;
+      c.fillStyle = pal[ch];
+      c.fillRect(x + i, y + j, 1, 1);
+    }
+  });
+}
+
+/* ---------- 描画ヘルパー ---------- */
+const rect = (g, x, y, w, h, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), w, h); };
+function line(g, x0, y0, x1, y1, c, w = 1) {
+  x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+  const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx + dy;
+  g.fillStyle = c;
+  for (;;) {
+    g.fillRect(x0, y0, w, w);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 >= dy) { err += dy; x0 += sx; }
+    if (e2 <= dx) { err += dx; y0 += sy; }
+  }
+}
+function disc(g, cx, cy, r, c) {
+  g.fillStyle = c; cx = Math.round(cx); cy = Math.round(cy);
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++)
+    if (x * x + y * y <= r * r + r * 0.6) g.fillRect(cx + x, cy + y, 1, 1);
+}
+function ring(g, cx, cy, r, c) {
+  g.fillStyle = c; cx = Math.round(cx); cy = Math.round(cy);
+  for (let y = -r - 1; y <= r + 1; y++) for (let x = -r - 1; x <= r + 1; x++) {
+    const d = x * x + y * y;
+    if (d <= r * r + r * 0.6 && d > (r - 1) * (r - 1) + (r - 1) * 0.6) g.fillRect(cx + x, cy + y, 1, 1);
+  }
+}
+const JFONT = '"DotGothic16","MS Gothic","Hiragino Kaku Gothic ProN","Yu Gothic",monospace';
+function jtext(g, s, x, y, size, col, align = 'left') {
+  g.font = size + 'px ' + JFONT; g.textAlign = align; g.textBaseline = 'middle';
+  g.lineJoin = 'round'; g.lineWidth = 3; g.strokeStyle = '#000';
+  g.strokeText(s, x, y); g.fillStyle = col; g.fillText(s, x, y);
+}
+function spark(g, x, y, c) { rect(g, x - 1, y, 3, 1, c); rect(g, x, y - 1, 1, 3, c); }
+
+/* ---------- ステージのコンセプト画(ドット絵) ---------- */
+// 理論化学
+function atom(g, cx, cy) {
+  const angs = [0, Math.PI / 3, 2 * Math.PI / 3];
+  const at = (a, t) => [cx + 11 * Math.cos(t) * Math.cos(a) - 4 * Math.sin(t) * Math.sin(a),
+                        cy + 11 * Math.cos(t) * Math.sin(a) + 4 * Math.sin(t) * Math.cos(a)];
+  angs.forEach(a => { for (let t = 0; t < 6.283; t += 0.06) { const [x, y] = at(a, t); rect(g, x, y, 1, 1, '#9ad0ff'); } });
+  disc(g, cx, cy, 3, '#000'); disc(g, cx, cy, 2, '#ff6b6b');
+  [[0, 0.6], [1, 3.8], [2, 2.2]].forEach(([k, t]) => { const [x, y] = at(angs[k], t); disc(g, x, y, 2, '#000'); disc(g, x, y, 1, '#fff'); });
+}
+function calc(g, cx, cy) {
+  const x = cx - 7, y = cy - 9;
+  rect(g, x, y, 14, 18, '#000'); rect(g, x + 1, y + 1, 12, 16, '#9aa3b8');
+  rect(g, x + 2, y + 2, 10, 4, '#000'); rect(g, x + 3, y + 3, 8, 2, '#b8f0a0');
+  for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++)
+    rect(g, x + 2 + i * 4, y + 8 + j * 3, 2, 2, (i === 2 && j === 2) ? '#e63946' : '#2b2b3b');
+}
+function graph(g, cx, cy) {
+  const x0 = cx - 14, y0 = cy + 11;
+  rect(g, x0, cy - 12, 1, 24, '#e0e8ff'); rect(g, x0, y0, 31, 1, '#e0e8ff');
+  for (let i = 0; i < 29; i++) rect(g, x0 + 2 + i, y0 - 2 - Math.round(20 * (1 - Math.exp(-i / 9))), 2, 2, '#ffd23f');
+}
+// 無機化学
+function card(g, cx, cy, sym, col) {
+  const x = cx - 7, y = cy - 9;
+  rect(g, x, y, 14, 18, '#000'); rect(g, x + 1, y + 1, 12, 16, col);
+  rect(g, x + 1, y + 1, 12, 1, 'rgba(255,255,255,.55)');
+  txtC(g, sym, cx, y + 5, '#222', 1);
+  rect(g, x + 3, y + 9, 2, 2, '#000'); rect(g, x + 9, y + 9, 2, 2, '#000');
+  rect(g, x + 5, y + 13, 4, 1, '#000'); rect(g, x + 4, y + 12, 1, 1, '#000'); rect(g, x + 9, y + 12, 1, 1, '#000');
+}
+function crystal(g, cx, cy) {
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    if (i < 2) rect(g, cx - 10 + i * 10, cy - 10 + j * 10, 10, 1, '#e8e8ff');
+    if (j < 2) rect(g, cx - 10 + i * 10, cy - 10 + j * 10, 1, 10, '#e8e8ff');
+  }
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+    const x = cx - 10 + i * 10, y = cy - 10 + j * 10;
+    disc(g, x, y, 3, '#000'); disc(g, x, y, 2, (i + j) % 2 ? '#a6f0a0' : '#ff9a8a');
+  }
+}
+// 物質の構成・結合(化学基礎)
+function diamond(g, cx, cy) {
+  const nb = [[-9, -8], [9, -8], [-9, 8], [9, 8]];
+  nb.forEach(([dx, dy]) => {
+    line(g, cx, cy, cx + dx, cy + dy, '#e8f8ff', 1);
+    line(g, cx + dx, cy + dy, cx + dx * 1.7, cy + dy * 1.25, '#9ad0ff', 1);
+    line(g, cx + dx, cy + dy, cx + dx * 1.0, cy + dy * 1.9, '#9ad0ff', 1);
+  });
+  disc(g, cx, cy, 4, '#000'); disc(g, cx, cy, 3, '#bfefff');
+  nb.forEach(([dx, dy]) => { disc(g, cx + dx, cy + dy, 3, '#000'); disc(g, cx + dx, cy + dy, 2, '#bfefff'); });
+}
+function graphite(g, cx, cy) {
+  const hexFlat = (x, y, col) => {
+    const p = [[-6, 0], [-3, -3], [3, -3], [6, 0], [3, 3], [-3, 3]];
+    for (let k = 0; k < 6; k++) { const u = p[k], v = p[(k + 1) % 6]; line(g, x + u[0], y + u[1], x + v[0], y + v[1], col, 1); }
+    p.forEach(([dx, dy]) => rect(g, x + dx - 1, y + dy - 1, 2, 2, '#fff'));
+  };
+  [[cy - 7, '#d8d8e8'], [cy + 7, '#9a9ab8']].forEach(([y, col], L) => {
+    hexFlat(cx - 6 + L * 3, y, col); hexFlat(cx + 6 + L * 3, y, col);
+  });
+  for (let x = cx - 12; x <= cx + 18; x += 4) rect(g, x, cy, 1, 1, '#ffd23f');
+}
+function metal(g, cx, cy) {
+  const pos = [];
+  for (let j = 0; j < 2; j++) for (let i = 0; i < 4; i++) pos.push([cx - 15 + i * 10, cy - 6 + j * 12]);
+  [[-10, -1], [-1, 2], [8, -2], [14, 1], [-5, 4], [4, -6], [-14, 3], [10, 6]].forEach(([dx, dy]) => rect(g, cx + dx, cy + dy, 2, 2, '#6ae0ff'));
+  pos.forEach(([x, y]) => { disc(g, x, y, 4, '#000'); disc(g, x, y, 3, '#ffd84a'); txtC(g, '+', x, y, '#7a5200', 1); });
+}
+function water(g, cx, cy) {
+  const hs = [[-8, 7], [8, 7]];
+  hs.forEach(([dx, dy]) => line(g, cx, cy - 3, cx + dx, cy - 3 + dy, '#fff', 1));
+  disc(g, cx, cy - 3, 5, '#000'); disc(g, cx, cy - 3, 4, '#ff6b6b');
+  hs.forEach(([dx, dy]) => { disc(g, cx + dx, cy - 3 + dy, 3, '#000'); disc(g, cx + dx, cy - 3 + dy, 2, '#fff'); });
+}
+function ionpair(g, cx, cy) {
+  disc(g, cx - 7, cy, 5, '#000'); disc(g, cx - 7, cy, 4, '#ff9a8a'); txtC(g, '+', cx - 7, cy, '#222', 1);
+  disc(g, cx + 6, cy, 7, '#000'); disc(g, cx + 6, cy, 6, '#a6f0a0'); txtC(g, '-', cx + 6, cy, '#222', 1);
+}
+function mole(g, cx, cy) {
+  for (let i = 0; i < 6; i++) { const x = cx - 10 + i * 4; disc(g, x, cy - 9 + (i % 2) * 2, 1, '#9ad0ff'); }
+  txtC(g, 'MOL', cx, cy + 2, '#ffd23f', 2, true);
+}
+function balance(g, cx, cy) {
+  rect(g, cx - 1, cy - 8, 3, 18, '#000'); rect(g, cx, cy - 8, 1, 17, '#e0e8ff');
+  rect(g, cx - 6, cy + 9, 13, 3, '#000'); rect(g, cx - 5, cy + 9, 11, 2, '#9aa3b8');
+  rect(g, cx - 15, cy - 9, 31, 3, '#000'); rect(g, cx - 14, cy - 8, 29, 1, '#e0e8ff');
+  [-13, 14].forEach(dx => {
+    line(g, cx + dx, cy - 7, cx + dx - 4, cy + 1, '#e0e8ff', 1); line(g, cx + dx, cy - 7, cx + dx + 4, cy + 1, '#e0e8ff', 1);
+    rect(g, cx + dx - 6, cy + 1, 13, 3, '#000'); rect(g, cx + dx - 5, cy + 1, 11, 2, '#ffd23f');
+  });
+  rect(g, cx - 13, cy - 5, 1, 1, '#ff6b6b'); disc(g, cx - 13, cy - 1, 1, '#6ae0ff');
+}
+function meflask(g, cx, cy) {
+  const y = cy - 12, ws = [4, 4, 4, 4, 4, 4, 4, 4, 4, 6, 8, 10, 12, 14, 14, 14, 14, 12, 10, 8];
+  ws.forEach((w, j) => rect(g, cx - w / 2 - 1, y + j, w + 2, 1, '#000'));
+  rect(g, cx - 3, y - 1, 6, 1, '#000'); rect(g, cx - 5, y + 20, 10, 1, '#000');
+  ws.forEach((w, j) => rect(g, cx - w / 2, y + j, w, 1, j >= 11 ? '#6ab0ff' : '#cfe8ff'));
+  rect(g, cx - 3, y + 5, 6, 1, '#e63946');
+}
+// 化学実験・分析
+function flask(g, cx, cy, liq) {
+  const y = cy - 8, wOf = j => j < 5 ? 4 : 4 + (j - 4);
+  for (let j = 0; j < 16; j++) { const w = wOf(j); rect(g, cx - w / 2 - 1, y + j, w + 2, 1, '#000'); }
+  for (let j = 0; j < 16; j++) { const w = wOf(j); rect(g, cx - w / 2, y + j, w, 1, j >= 9 ? liq : '#cfe8ff'); }
+  rect(g, cx - 3, y - 1, 6, 1, '#000'); rect(g, cx - 8, y + 16, 16, 1, '#000');
+  rect(g, cx - 1, y - 5, 2, 2, '#fff'); rect(g, cx + 2, y - 9, 2, 2, '#fff'); rect(g, cx - 2, y - 13, 2, 2, '#fff');
+}
+function tubes(g, cx, cy) {
+  [[-9, '#ff6a6a'], [0, '#6ab0ff'], [9, '#8aff9a']].forEach(([dx, col]) => {
+    const x = cx + dx;
+    rect(g, x - 3, cy - 12, 6, 18, '#000'); rect(g, x - 2, cy - 12, 4, 17, '#cfe8ff'); rect(g, x - 2, cy - 3, 4, 8, col);
+  });
+  rect(g, cx - 14, cy - 1, 28, 4, '#000'); rect(g, cx - 13, cy, 26, 2, '#b07a3a');
+}
+function chromato(g, cx, cy) {
+  const by = cy + 9;
+  rect(g, cx - 20, by, 41, 1, '#e0e8ff'); rect(g, cx - 20, cy - 11, 1, 21, '#e0e8ff');
+  const pk = [[-11, 10, 2], [-2, 19, 2.2], [8, 7, 2], [15, 13, 1.8]];
+  for (let x = -18; x <= 20; x++) {
+    let h = 0; pk.forEach(([m, a, s]) => h += a * Math.exp(-((x - m) ** 2) / (2 * s * s)));
+    rect(g, cx + x, by - 1 - Math.round(h), 1, 2, '#6aff9a');
+  }
+}
+function hazard(g, cx, cy) {
+  const y0 = cy - 11;
+  for (let j = 0; j <= 20; j++) { const w = 2 + Math.round(j * 1.1); rect(g, cx - w / 2 - 1, y0 + j, w + 2, 1, '#000'); }
+  for (let j = 0; j <= 19; j++) { const w = 2 + Math.round(j * 1.1); rect(g, cx - w / 2, y0 + j, w, 1, '#ffd23f'); }
+  rect(g, cx - 1, cy - 3, 2, 7, '#222'); rect(g, cx - 1, cy + 6, 2, 2, '#222');
+}
+// ゴール
+function trophy(g, cx, cy) {
+  const y = cy - 12;
+  ring(g, cx - 10, y + 5, 3, '#ffd23f'); ring(g, cx + 10, y + 5, 3, '#ffd23f');
+  for (let j = 0; j < 12; j++) { const w = 16 - Math.round(j * 0.7); rect(g, cx - w / 2 - 1, y + j, w + 2, 1, '#000'); }
+  for (let j = 0; j < 12; j++) { const w = 16 - Math.round(j * 0.7); rect(g, cx - w / 2, y + j, w, 1, '#ffd23f'); }
+  rect(g, cx - 2, y + 12, 5, 5, '#000'); rect(g, cx - 1, y + 12, 3, 5, '#ffd23f');
+  rect(g, cx - 7, y + 17, 15, 4, '#000'); rect(g, cx - 6, y + 17, 13, 3, '#c79a00');
+  rect(g, cx - 4, y + 3, 2, 5, '#fff6a0');
+}
+
+/* 隙間に置く絵の一覧(w = 横幅の目安) */
+const ITEMS = [
+  [ { w: 24, draw: atom },
+    { w: 30, draw: balance },
+    { w: 14, draw: calc },
+    { w: 32, draw: graph } ],
+  [ { w: 14, draw: (g, cx, cy) => card(g, cx, cy, 'HE', '#d9b3ff') },
+    { w: 14, draw: (g, cx, cy) => card(g, cx, cy, 'NA', '#ff9a8a') },
+    { w: 24, draw: crystal },
+    { w: 14, draw: (g, cx, cy) => card(g, cx, cy, 'FE', '#bfc7d1') },
+    { w: 14, draw: (g, cx, cy) => card(g, cx, cy, 'AU', '#ffd84a') },
+    { w: 14, draw: (g, cx, cy) => card(g, cx, cy, 'CL', '#a6f0a0') } ],
+  [ { w: 26, draw: diamond },
+    { w: 30, draw: graphite },
+    { w: 40, draw: metal } ],
+  [ { w: 26, draw: mole },
+    { w: 14, draw: meflask },
+    { w: 22, draw: water },
+    { w: 26, draw: ionpair } ],
+  [ { w: 16, draw: (g, cx, cy) => flask(g, cx, cy, '#6ab0ff') },
+    { w: 28, draw: tubes },
+    { w: 40, draw: chromato },
+    { w: 24, draw: hazard } ]
+];
+const EMBLEMS = [
+  calc,
+  (g, cx, cy) => card(g, cx, cy, 'AU', '#ffd84a'),
+  diamond,
+  meflask,
+  (g, cx, cy) => flask(g, cx, cy, '#8aff9a')
+];
+
+/* ---------- 盤面の座標 ---------- */
+function cellPos(i) {
+  const r = Math.floor(i / 10), c = i % 10;
+  const col = (r % 2 === 0) ? c : 9 - c;
+  return { x: OX + col * CELL, y: rowY(r) };
+}
+function slotXY(pos, k) {
+  const p = cellPos(pos);
+  return { x: p.x + 1 + (k % 2 ? 18 : 4), y: p.y + 1 + (k < 2 ? 10 : 19) };
+}
+
+/* ---------- 盤面(静止画レイヤー) ---------- */
+const bg = document.createElement('canvas');
+bg.width = W; bg.height = H;
+
+function tileColors(i) {
+  if (i === 0) return ['#6ab0ff', '#a6d2ff', '#3f7fd0'];
+  if (i === GOAL) return ['#ffd700', '#fff08a', '#c79a00'];
+  const k = KINDS[CELL_KIND[i]];
+  if (k && k.cols) return k.cols;
+  return STAGES[stageOf(i)].pal[i % 2];
+}
+
+/* ステージの範囲(y) */
+function stageRegion(s) {
+  const top = s === 4 ? 0 : rowY(2 * s + 1);
+  const bot = s === 0 ? H : rowY(2 * s - 1);
+  return [top, bot];
+}
+/* 蛇行の隙間 g(下からg段めと次の段のあいだ)で絵を置ける横範囲 */
+function gapFree(gi) { return gi % 2 === 0 ? [OX + 4, OX + 9 * CELL - 8] : [OX + CELL + 8, OX + 10 * CELL - 4]; }
+const gapCenterY = gi => rowY(gi + 1) + ROWH + GAP / 2;
+
+function layoutItems(g, items, x0, x1, yc) {
+  const tot = items.reduce((a, b) => a + b.w, 0);
+  const sp = (x1 - x0 - tot) / (items.length + 1);
+  let x = x0 + sp;
+  items.forEach(it => { it.draw(g, Math.round(x + it.w / 2), yc); x += it.w + sp; });
+}
+function plate(g, x, y, w, h, col, title, sub) {
+  rect(g, x - 2, y - 2, w + 4, h + 4, '#fff'); rect(g, x - 1, y - 1, w + 2, h + 2, '#000');
+  rect(g, x, y, w, h, col);
+  rect(g, x, y, w, 1, 'rgba(255,255,255,.45)'); rect(g, x, y + h - 1, w, 1, 'rgba(0,0,0,.35)');
+  jtext(g, title, x + 8, y + Math.round(h * 0.36), 13, '#fff');
+  if (sub) jtext(g, sub, x + 8, y + Math.round(h * 0.76), 8, '#fff');
+}
+
+function stageBG(g, s, y0, y1) {
+  const h = y1 - y0;
+  g.fillStyle = STAGES[s].bg; g.fillRect(0, y0, W, h);
+  g.save(); g.beginPath(); g.rect(0, y0, W, h); g.clip();
+  const hsh = (x, y) => (Math.imul(x + 101, 73856093) ^ Math.imul(y + 211, 19349663)) >>> 0;
+  if (s === 0) {                                              // 飛びまわる粒子(原子・分子)
+    for (let y = y0 - (y0 % 12); y < y1; y += 12)
+      for (let x = 0; x < W; x += 12) {
+        const h = hsh(x, y), px = x + (h % 9), py = y + ((h >> 8) % 9);
+        g.fillStyle = (h >> 4) % 3 ? '#2c509c' : '#4673c8';
+        g.fillRect(px, py, 2, 2);
+        if (h % 5 === 0) { g.fillStyle = '#6f94e0'; g.fillRect(px, py, 1, 1); }
+      }
+  } else if (s === 1) {                                       // 周期表のマス
+    const cw = 14, ch = 16;
+    g.fillStyle = '#935f2a';
+    for (let x = 0; x < W; x += cw) g.fillRect(x, y0, 1, h);
+    for (let y = y0 - (y0 % ch); y < y1; y += ch) g.fillRect(0, y, W, 1);
+    for (let y = y0 - (y0 % ch); y < y1; y += ch)
+      for (let x = 0; x < W; x += cw)
+        if (hsh(x, y) % 4 === 0) { g.fillStyle = '#8a5826'; g.fillRect(x + 1, y + 1, cw - 1, ch - 1); g.fillStyle = '#a8703a'; g.fillRect(x + 3, y + 3, 4, 1); }
+  } else if (s === 2) {                                       // 結晶格子(イオン結晶・金属結晶)
+    const st = 14;
+    for (let y = y0 - (y0 % st); y < y1; y += st) {
+      g.fillStyle = '#85306f'; g.fillRect(0, y + 2, W, 1);
+    }
+    for (let x = 0; x < W; x += st) { g.fillStyle = '#85306f'; g.fillRect(x + 2, y0, 1, h); }
+    for (let y = y0 - (y0 % st); y < y1; y += st)
+      for (let x = 0; x < W; x += st) {
+        const odd = ((x / st) + (y / st)) % 2;
+        disc(g, x + 2, y + 2, odd ? 2 : 1, odd ? '#c4709f' : '#a24c88');
+      }
+  } else if (s === 3) {                                       // メスシリンダーの目盛り
+    for (let x0b = 8; x0b < W; x0b += 64) {
+      g.fillStyle = '#1a6b5d'; g.fillRect(x0b, y0, 1, h);
+      for (let y = y0 - (y0 % 6); y < y1; y += 6) {
+        const big = (Math.floor(y / 6) % 5 === 0);
+        g.fillStyle = big ? '#2a8f7c' : '#1a6b5d';
+        g.fillRect(x0b + 1, y, big ? 9 : 4, 1);
+      }
+    }
+  } else {                                                    // 反応のあわ(気泡)
+    for (let y = y0 - (y0 % 22); y < y1; y += 22)
+      for (let x = 0; x < W; x += 22) {
+        const h2 = hsh(x, y);
+        if (h2 % 3 !== 0) continue;
+        const r = 2 + ((h2 >> 4) % 4), bx = x + (h2 % 12), by = y + ((h2 >> 8) % 12);
+        ring(g, bx, by, r, '#44445c'); g.fillStyle = '#6a6a88'; g.fillRect(bx - 1, by - r + 1, 1, 1);
+      }
+  }
+  g.restore();
+}
+
+function buildBoard() {
+  const g = bg.getContext('2d');
+  g.clearRect(0, 0, W, H);
+  g.imageSmoothingEnabled = false;
+
+  // 1. ステージごとの背景
+  for (let s = 0; s < 5; s++) { const [y0, y1] = stageRegion(s); stageBG(g, s, y0, y1); }
+  for (let s = 0; s < 4; s++) rect(g, 0, stageRegion(s)[0] - 1, W, 2, '#e8e8ff');
+
+  // 2. 蛇行の隙間のコンセプト画(各ステージ: 入口の看板 + 中のイラスト)
+  for (let gi = 0; gi < 9; gi++) {
+    const [x0, x1] = gapFree(gi), yc = gapCenterY(gi);
+    if (gi % 2 === 0) {
+      layoutItems(g, ITEMS[gi / 2], x0, x1, yc);
+    } else {
+      const s = (gi + 1) / 2;
+      EMBLEMS[s](g, x1 - 22, yc);
+    }
+  }
+  // スタート側(1つめのステージの看板)
+  {
+    const yc = H - BOTH / 2;
+    txtC(g, 'START', OX + 32, yc, '#ffd23f', 2, true);
+    EMBLEMS[0](g, OX + 286, yc);
+  }
+  // ゴール側
+  {
+    const yc = TOPH / 2;
+    trophy(g, OX + 15, yc);
+    plate(g, OX + 46, yc - 18, 250, 36, '#c79a00', 'ゴール! ノーベル化学賞!', 'ここまでたどりついたら きみも化学マスター');
+    spark(g, OX + 38, yc - 20, '#fff6a0'); spark(g, 300, yc - 26, '#fff6a0'); spark(g, 306, yc + 24, '#fff6a0');
+  }
+
+  // 3. 道(マスどうしをつなぐ)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < GOAL; i++) {
+      const a = cellPos(i), b = cellPos(i + 1);
+      const ax = a.x + 15, ay = a.y + 15, bx = b.x + 15, by = b.y + 15;
+      const m = pass === 0 ? 5 : 4;
+      g.fillStyle = pass === 0 ? '#000' : STAGES[stageOf(i)].road;
+      g.fillRect(Math.min(ax, bx) - m, Math.min(ay, by) - m, Math.abs(ax - bx) + 2 * m, Math.abs(ay - by) + 2 * m);
+    }
+  }
+
+  // 4. マス
+  const ink = { '1': '#222', '2': '#222' };
+  for (let i = 0; i <= GOAL; i++) {
+    const p = cellPos(i), tx = p.x + 1, ty = p.y + 1;
+    const [base, light, dark] = tileColors(i);
+    g.fillStyle = '#000'; g.fillRect(tx, ty, 28, 28);
+    g.fillStyle = base;   g.fillRect(tx + 1, ty + 1, 26, 26);
+    g.fillStyle = light;  g.fillRect(tx + 1, ty + 1, 26, 1); g.fillRect(tx + 1, ty + 1, 1, 26);
+    g.fillStyle = dark;   g.fillRect(tx + 1, ty + 26, 26, 1); g.fillRect(tx + 26, ty + 1, 1, 26);
+    if (i === 0) {
+      txt(g, 'S', tx + 3, ty + 3, '#10285a', 2);
+    } else if (i === GOAL) {
+      txt(g, 'G', tx + 3, ty + 3, '#6b4a00', 2);
+      spr(g, FLAG, tx + 17, ty + 3, { '1': '#c1121f', '2': '#222' });
+    } else {
+      txt(g, i, tx + 3, ty + 3, '#2b2b3b');
+      const ic = KIND_ICON[CELL_KIND[i]];
+      if (ic) spr(g, ic, tx + 24 - ic[0].length, ty + 3, ink);
+      if (CELL_VAL[i]) txt(g, CELL_VAL[i], tx + 19, ty + 14, '#222', 2);       // 休む回数・戻るマス数
+      if (i % STAGE_LEN === 0) spr(g, FLAG, tx + 10, ty + 14, { '1': STAGES[stageOf(i)].accent, '2': '#222' });   // ステージの入り口の旗
+    }
+  }
+}
+
+/* ---------- サイコロ ---------- */
+const diceCv = document.getElementById('dice');
+const dctx = diceCv.getContext('2d');
+const PIPS = {
+  1: [[1,1]], 2: [[0,0],[2,2]], 3: [[0,0],[1,1],[2,2]],
+  4: [[0,0],[2,0],[0,2],[2,2]], 5: [[0,0],[2,0],[1,1],[0,2],[2,2]],
+  6: [[0,0],[2,0],[0,1],[2,1],[0,2],[2,2]]
+};
+function drawDice(n) {
+  dctx.clearRect(0, 0, 16, 16);
+  dctx.fillStyle = '#000'; dctx.fillRect(0, 0, 16, 16);
+  dctx.clearRect(0, 0, 1, 1); dctx.clearRect(15, 0, 1, 1); dctx.clearRect(0, 15, 1, 1); dctx.clearRect(15, 15, 1, 1);
+  dctx.fillStyle = '#fff'; dctx.fillRect(1, 1, 14, 14);
+  dctx.fillStyle = '#cfcfd8'; dctx.fillRect(1, 13, 14, 2); dctx.fillRect(13, 1, 2, 14);
+  dctx.fillStyle = n === 1 ? '#e63946' : '#222';
+  PIPS[n].forEach(([a, b]) => dctx.fillRect(3 + a * 4, 3 + b * 4, 2, 2));
+}
+
+/* ---------- クイズカードの裏面(ドット絵) ---------- */
+const deckCv = document.getElementById('deckcv'), deckCv2 = document.getElementById('deckcv2');
+function drawBack(cv, col, icon) {                            // col = { m: 地色, s: 下のカード, p: もよう }
+  const g = cv.getContext('2d');
+  g.clearRect(0, 0, 28, 36);
+  g.imageSmoothingEnabled = false;
+  for (const o of [4, 2]) {                                   // 下に重なったカード
+    rect(g, o, o, 24, 32, '#000');
+    rect(g, o + 1, o + 1, 22, 30, '#f4f1de');
+    rect(g, o + 2, o + 2, 20, 28, col.s);
+  }
+  rect(g, 0, 0, 24, 32, '#000');                              // いちばん上のカード
+  rect(g, 1, 1, 22, 30, '#f4f1de');
+  rect(g, 2, 2, 20, 28, col.m);
+  for (let y = 3; y < 29; y++) for (let x = 3; x < 21; x++)
+    if ((x + y) % 4 === 0) rect(g, x, y, 1, 1, col.p);       // ななめのもよう
+  rect(g, 4, 4, 16, 1, '#ffd23f'); rect(g, 4, 27, 16, 1, '#ffd23f');   // 黄色のわく
+  rect(g, 4, 4, 1, 24, '#ffd23f'); rect(g, 19, 4, 1, 24, '#ffd23f');
+  disc(g, 12, 16, 7, '#000'); disc(g, 12, 16, 6, '#ffd23f');           // まん中のマーク
+  spr(g, icon, 10, 13, { '1': '#222' });
+  [[7, 7], [16, 7], [7, 24], [16, 24]].forEach(([x, y]) => spark(g, x, y, '#fff6a0'));
+}
+function drawCardBack() {
+  drawBack(deckCv, { m: '#2f6fd6', s: '#255bb0', p: '#5b93ec' }, ICON_QUIZ);      // クイズ: 青
+  drawBack(deckCv2, { m: '#d63a3a', s: '#a82424', p: '#ee6b6b' }, ICON_STAR);     // イベント: 赤
+}
+/* クイズカードの表(上に問題文・下に4つの選択肢 / 白地・黒文字 / ふちは青)
+   card = { q, c: [選択肢...], lv }
+   res  = { pick: 自分の選んだ番号, ans: 正解の番号 }(答えたあとだけ。なければマークなし)
+   onPick(番号) をわたすと、選択肢をタップして答えられる
+   せいかい: 自分の選択肢に✅ / まちがい: 正解に✅・自分の選択肢に❌ */
+function setQuizMarks(el, res) {
+  el.querySelectorAll('.qa').forEach((a, i) => {
+    a.querySelector('.qm').textContent = !res ? '' : i === res.ans ? '✅' : i === res.pick ? '❌' : '';
+    if (res) a.classList.remove('tap');
+  });
+}
+function makeQuizCard(card, res, onPick) {
+  const el = document.createElement('div'); el.className = 'qcard';
+  el.style.setProperty('--bc', '#2f6fd6');
+  if (card.lv) {                                              // 難易度(★の数)を左上に。問題文の上の段なので重ならない
+    const lv = document.createElement('div'); lv.className = 'qlv';
+    lv.setAttribute('aria-label', '難易度 ' + card.lv + '/4');
+    lv.append(document.createTextNode('★'.repeat(card.lv)));
+    const off = document.createElement('span'); off.className = 'off'; off.textContent = '★'.repeat(4 - card.lv);
+    lv.append(off); el.append(lv);
+  }
+  const q = document.createElement('div'); q.className = 'qq'; q.textContent = card.q;
+  el.append(q);
+  ['ア', 'イ', 'ウ', 'エ'].forEach((m, i) => {
+    const a = document.createElement('div'); a.className = 'qa';
+    const b = document.createElement('b'); b.textContent = m;
+    const t = document.createElement('span'); t.className = 'qt'; t.textContent = card.c[i] || '';
+    const k = document.createElement('span'); k.className = 'qm';
+    a.append(b, t, k);
+    if (onPick && card.c[i]) {
+      a.classList.add('tap'); a.setAttribute('role', 'button'); a.tabIndex = 0;
+      a.addEventListener('click', () => onPick(i));
+      a.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(i); } });
+    }
+    el.append(a);
+  });
+  setQuizMarks(el, res);
+  return el;
+}
+/* 用意した100枚のカードを並べる(いまは表示だけ) */
+function renderCardSamples() {
+  const box = $('qsamples'); box.innerHTML = '';
+  const block = (title, color, count, items) => {
+    const hd = document.createElement('div'); hd.className = 'qhd';
+    const c = document.createElement('i'); c.style.background = color;
+    const t = document.createElement('span'); t.textContent = title;
+    const n = document.createElement('span'); n.className = 'n'; n.textContent = count;
+    hd.append(c, t, n);
+    const row = document.createElement('div'); row.className = 'qrow';
+    items.forEach(([card, res, label]) => {
+      const w = document.createElement('div'); w.className = 'qwrap';
+      const l = document.createElement('div'); l.className = 'ql'; l.textContent = label;
+      w.append(makeQuizCard(card, res), l); row.append(w);
+    });
+    box.append(hd, row);
+  };
+  block('クイズカード', '#2f6fd6', QUIZ_CARDS.length + '枚', QUIZ_CARDS.map(c => [c, null, 'No.' + c.id]));
+  const ex = QUIZ_CARDS[0];                                   // 答えたあとの見本(✅・❌)
+  block('答えたあとの見本', '#2f6fd6', '✅ ❌', [
+    [ex, { pick: ex.a, ans: ex.a }, 'せいかいのとき'],
+    [ex, { pick: ex.a === 0 ? 1 : 0, ans: ex.a }, 'まちがいのとき']
+  ]);
+}
+/* イベントカードの表(赤いふち / 上に番号・名前・内容・効果)
+   card = { id, name, text(内容), effect(効果の説明) } */
+function makeEventCard(card) {
+  const el = document.createElement('div'); el.className = 'qcard ecard';
+  const h = document.createElement('div'); h.className = 'eh';
+  const no = document.createElement('span'); no.textContent = 'イベント No.' + card.id;
+  h.append(no);
+  const n = document.createElement('div'); n.className = 'en';
+  n.textContent = card.name;
+  const box = (cls, label, body) => {
+    const d = document.createElement('div'); d.className = cls;
+    const tg = document.createElement('span'); tg.className = 'tg'; tg.textContent = label;
+    const t = document.createElement('div'); t.textContent = body;
+    d.append(tg, t); return d;
+  };
+  el.append(h, n, box('ek', '内容', card.text), box('ee', '効果', card.effect));
+  return el;
+}
+function renderEventDeck() { $('eventLeft').textContent = EVENT_CARDS.length - eventUsed.size; }
+function renderDeck() { $('quizLeft').textContent = QUIZ_CARDS.length - quizUsed.size; }   // 出したカードのぶん減る
+
+/* ---------- サウンド ---------- */
+let actx = null, muted = false;
+function beep(f, d = 0.08, type = 'square', v = 0.04, delay = 0) {
+  if (muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    const t = actx.currentTime + delay;
+    o.type = type; o.frequency.value = f;
+    o.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(v, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.start(t); o.stop(t + d + 0.02);
+  } catch (e) { /* ignore */ }
+}
+
+/* ---------- ゲーム状態 ---------- */
+const $ = id => document.getElementById(id);
+const cv = $('board'), ctx = cv.getContext('2d'), vp = $('vp');
+cv.width = W; cv.height = H;
+let players = [], cur = 0, busy = true, running = false, winner = null, moving = -1, gid = 0, follow = true;
+let conf = [], logLines = [];
+const GOAL_PTS = [10, 5, 3, 1], EVENT_PTS = 3;   // 着順ポイント / イベントのミニゲーム成功ポイント(クイズは★の数)
+let goalCount = 0;
+let setupModes = [0, 1, 2, 2];                    // 0:人間 1:COM 2:なし
+const MODE_LABEL = ['人間', 'COM', 'なし'];
+
+const sleep = ms => {
+  const g = gid;
+  return new Promise((res, rej) => setTimeout(() => g === gid ? res() : rej('cancel'), ms));
+};
+let rng = Math.random;                              // ローカル対戦では、全員おなじ「たね」の乱数にかわる
+const rand6 = () => 1 + Math.floor(rng() * 6);
+
+function say(s) {
+  logLines.push(s);
+  if (logLines.length > 4) logLines.shift();
+  $('log').innerHTML = logLines.map(() => '<div></div>').join('');
+  const kids = $('log').children;
+  logLines.forEach((l, i) => kids[i].textContent = l);
+  $('toast').textContent = s;
+}
+function posLabel(p) { return p.pos === 0 ? 'スタート' : p.pos === GOAL ? 'ゴール' : p.pos + 'マス'; }
+function render() {
+  const p = players[cur];
+  if (p) {
+    $('tchip').style.background = p.color;
+    $('tname').textContent = p.name + (net && !p.cpu && !p.remote ? '(あなた)' : '') + 'の番';
+  }
+  $('roll').disabled = busy || !p || p.cpu || p.remote || !!winner;
+  const ns = $('netst');
+  if (net) {
+    const tot = players.filter(q => q.human0).length, on = players.filter(q => q.human0 && !q.cpu).length;
+    ns.hidden = false; ns.textContent = 'ローカル対戦 つながっている人: ' + on + ' / ' + tot + '人';
+  } else ns.hidden = true;
+  $('players').innerHTML = '';
+  players.forEach((q, i) => {
+    const d = document.createElement('div');
+    d.className = 'pl' + (i === cur && !winner ? ' on' : '');
+    const c = document.createElement('span'); c.className = 'chip'; c.style.background = q.color;
+    const n = document.createElement('span'); n.textContent = q.name + (net && !q.cpu && !q.remote ? '(あなた)' : '');
+    const ps = document.createElement('span'); ps.textContent = (q.rank ? q.rank + '着' : posLabel(q)) + ' ' + q.pts + 'P';
+    d.append(c, n, ps);
+    const tags = [];
+    if (q.skip > 0) tags.push('休' + q.skip);
+    if (tags.length) { const s = document.createElement('span'); s.className = 'st'; s.textContent = tags.join(' '); d.append(s); }
+    $('players').append(d);
+  });
+}
+
+/* ---------- 描画ループ ---------- */
+function animPos(p, t) {
+  if (p.anim) {
+    const u = Math.min(1, (t - p.anim.t0) / p.anim.dur);
+    return {
+      x: p.anim.a.x + (p.anim.b.x - p.anim.a.x) * u,
+      y: p.anim.a.y + (p.anim.b.y - p.anim.a.y) * u - Math.sin(Math.PI * u) * 7,
+      gy: p.anim.a.y + (p.anim.b.y - p.anim.a.y) * u
+    };
+  }
+  const s = slotXY(p.pos, p.idx);
+  return { x: s.x, y: s.y, gy: s.y };
+}
+function drawPawn(p, t) {
+  const a = animPos(p, t);
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.fillRect(Math.round(a.x) + 1, Math.round(a.gy) + 9, 6, 1);
+  spr(ctx, PAWN, a.x, a.y, { '1': '#1b1b2f', '2': p.color, '3': '#ffdbac' });
+}
+/* 盤面のスライド: 動いている駒(または今の番の駒)を自動で追いかける */
+function followTick(t) {
+  if (!follow || !running) return;
+  const p = moving >= 0 ? players[moving] : players[cur];
+  if (!p) return;
+  const a = animPos(p, t);
+  const scale = cv.clientWidth / W;
+  if (!scale) return;
+  let target = a.y * scale - vp.clientHeight * 0.6;
+  target = Math.max(0, Math.min(target, vp.scrollHeight - vp.clientHeight));
+  const d = target - vp.scrollTop;
+  if (Math.abs(d) < 1) { vp.scrollTop = target; return; }
+  let step = d * 0.12;
+  if (Math.abs(step) < 1) step = Math.sign(d);
+  vp.scrollTop += step;
+}
+function frame(t) {
+  ctx.drawImage(bg, 0, 0);
+  if (running) {
+    players.forEach((p, i) => { if (i !== moving) drawPawn(p, t); });
+    if (moving >= 0 && players[moving]) drawPawn(players[moving], t);
+    if (!winner && players[cur]) {
+      const a = animPos(players[cur], t);
+      const bob = Math.floor(Math.sin(t / 200) * 2);
+      const mx = Math.round(a.x) + 1, my = Math.round(a.y) - 6 + bob;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(mx - 1, my - 1, 7, 1); ctx.fillRect(mx, my, 1, 1); ctx.fillRect(mx + 4, my, 1, 1);
+      ctx.fillRect(mx + 1, my + 1, 1, 1); ctx.fillRect(mx + 3, my + 1, 1, 1); ctx.fillRect(mx + 2, my + 2, 1, 1);
+      ctx.fillRect(mx + 2, my + 3, 1, 1);
+      ctx.fillStyle = '#ffd23f';
+      ctx.fillRect(mx, my, 5, 1); ctx.fillRect(mx + 1, my + 1, 3, 1); ctx.fillRect(mx + 2, my + 2, 1, 1);
+    }
+    followTick(t);
+  }
+  if (conf.length) {
+    const top = vp.scrollTop / (cv.clientWidth / W || 1);
+    conf.forEach(c => {
+      c.y += c.vy; c.x += c.vx;
+      if (c.y > top + 330) { c.y = top - 4; c.x = Math.random() * W; }
+      ctx.fillStyle = c.c; ctx.fillRect(Math.round(c.x), Math.round(c.y), 2, 2);
+    });
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- クイズカードを画面中央に出して、答えてもらう ---------- */
+let quizUsed = new Set(), quizResolve = null;
+/* 選択肢の位置をおぼえられないよう、出すたびに並びをランダムにする(内容と正解はそのまま)。
+   通信中は全員で同じ並びになるよう、ゲームごとのたねから作った専用の乱数(srng)を使う */
+let srng = Math.random;
+function shuffleChoices(c, a) {
+  const idx = c.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { const j = Math.floor(srng() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return { c: idx.map(i => c[i]), a: idx.indexOf(a) };
+}
+function drawQuizCard() {                            // 全カードの山から1枚ひく(出したカードはもどらない)
+  const pool = QUIZ_CARDS.filter(c => !quizUsed.has(c.id));
+  if (!pool.length) return { card: null };            // 山がなくなったら、おなじカードは出さない
+  const base = pool[Math.floor(rng() * pool.length)];
+  quizUsed.add(base.id);
+  const sh = shuffleChoices(base.c, base.a);
+  return { card: { ...base, c: sh.c, a: sh.a } };
+}
+/* カードを引く演出: うかびあがる → シャッフル → 1枚が裏向きでひかれる → 表をむく */
+async function dealAnimation(face, hint, opt = {}) {
+  const box = $('quizBox');
+  box.innerHTML = ''; face.style.visibility = 'hidden'; box.append(face);   // 表の大きさをはかる(裏もおなじ大きさに)
+  const w = face.offsetWidth, h = face.offsetHeight;
+  box.innerHTML = '';
+  const stage = document.createElement('div'); stage.id = 'qstage'; if (opt.ev) stage.classList.add('ev');
+  stage.style.width = w + 'px'; stage.style.height = h + 'px';
+  const N = 6, cards = [];
+  for (let i = 0; i < N; i++) {
+    const c = document.createElement('div'); c.className = 'cb rise';
+    c.style.setProperty('--i', i);
+    c.style.setProperty('--dx', (i % 2 ? 1 : -1) * 90 + 'px');
+    c.style.setProperty('--r', (i % 2 ? 1 : -1) * 9 + 'deg');
+    const q = document.createElement('span'); q.textContent = opt.ev ? '★' : '?'; c.append(q);
+    stage.append(c); cards.push(c);
+  }
+  box.append(stage);
+  hint.textContent = 'カードがうかびあがる…';
+  for (let i = 0; i < 4; i++) beep(420 + i * 90, 0.07, 'triangle', 0.04, i * 0.08);
+  await sleep(1150);
+  hint.textContent = 'シャッフル中…';
+  cards.forEach(c => { c.className = 'cb shuf'; });
+  for (let k = 0; k < 8; k++) beep(150 + (k % 2) * 40, 0.05, 'square', 0.025, k * 0.2);
+  await sleep(1800);
+  hint.textContent = 'カードをひくよ!';
+  cards.slice(0, N - 1).forEach(c => { c.className = 'cb fade'; });
+  const top = cards[N - 1];
+  top.className = 'cb draw';
+  beep(660, 0.1); (opt.onDraw || renderDeck)();                                            // ひいた瞬間にのこり枚数がへる
+  await sleep(650);
+  top.className = 'cb flipout'; beep(880, 0.08);
+  await sleep(300);
+  box.innerHTML = ''; face.style.visibility = 'visible'; face.classList.add('qflipin'); box.append(face);
+  beep(990, 0.1, 'square', 0.04, 0.05);
+  await sleep(300);
+  face.classList.remove('qflipin');
+}
+let eventUsed = new Set();
+function drawEventCard() {                          // 山から1枚ひく(出したカードはもどらない。なくなったら null)
+  const pool = EVENT_CARDS.filter(c => !eventUsed.has(c.id));
+  if (!pool.length) return { card: null };            // 山がなくなったら、おなじカードは出さない
+  const card = pool[Math.floor(rng() * pool.length)];
+  eventUsed.add(card.id);
+  return { card };
+}
+/* ---------- イベントカードのミニゲーム ---------- */
+function mgEl(cls, txt) { const d = document.createElement('div'); if (cls) d.className = cls; if (txt != null) d.textContent = txt; return d; }
+function mgBtn(label) { const b = document.createElement('button'); b.type = 'button'; b.className = 'btn big mgb'; b.textContent = label; return b; }
+function mgTap(btn, ctx, fn) {                       // ボタンのタップ(スペース・Enterでも)
+  btn.addEventListener('pointerdown', e => { e.preventDefault(); if (ctx.alive()) fn(); });
+  ctx.on(window, 'keydown', e => { if ((e.code === 'Space' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); if (ctx.alive()) fn(); } });
+}
+const MG = {
+  timing(area, ctx, cfg) {                           // うごくマーカーを、ゾーンの中で止める
+    const bar = mgEl('mgbar' + (cfg.vert ? ' v' : '')), zone = mgEl('mgz'), mk = mgEl('mgm'); bar.append(zone, mk);
+    const cnt = mgEl('mgmsg'), msg = mgEl('mgmsg');
+    const P = cfg.vert ? ['top', 'height'] : ['left', 'width'];
+    let pos = Math.random(), dir = 1, speed = cfg.speed, zw = cfg.zone, zc = .5, hits = 0;
+    const place = () => { zc = zw / 2 + .03 + Math.random() * (1 - zw - .06); zone.style[P[0]] = (zc - zw / 2) * 100 + '%'; zone.style[P[1]] = zw * 100 + '%'; };
+    const info = () => { cnt.textContent = 'せいこう ' + hits + ' / ' + cfg.need; };
+    place(); info();
+    const b = mgBtn(cfg.btn || 'ストップ!');
+    area.append(bar, cnt, msg, b);
+    ctx.loop(dt => {
+      pos += dir * speed * dt;
+      if (pos > 1) { pos = 1; dir = -1; } if (pos < 0) { pos = 0; dir = 1; }
+      mk.style[cfg.vert ? 'top' : 'left'] = pos * 100 + '%';
+    });
+    mgTap(b, ctx, () => {
+      if (Math.abs(pos - zc) <= zw / 2) {
+        hits++; beep(880, .08); info();
+        if (hits >= cfg.need) return ctx.done(true);
+        msg.textContent = 'ナイス!'; zw *= .85; speed *= 1.12; place();
+      } else {
+        beep(180, .15, 'sawtooth'); msg.textContent = 'ミス…';
+        if (cfg.reset) { hits = 0; zw = cfg.zone; speed = cfg.speed; place(); info(); }
+      }
+    });
+  },
+  pour(area, ctx, cfg) {                             // おしている間そそぎ、標線にぴったりではなす
+    const mark = .72 + Math.random() * .14, tol = .025;
+    const flask = mgEl('mgflask'), liq = mgEl('liq'), mk = mgEl('mk'), lb = document.createElement('span');
+    lb.textContent = cfg.mark || '標線'; mk.append(lb); mk.style.bottom = mark * 100 + '%'; flask.append(liq, mk);
+    const msg = mgEl('mgmsg', cfg.msg || 'おしている間、液がふえるよ');
+    const b = mgBtn(cfg.btn || 'おして そそぐ');
+    area.append(flask, msg, b);
+    let lv = 0, on = false;
+    const stop = () => {
+      if (!on) return; on = false;
+      if (!ctx.alive()) return;
+      if (lv >= mark - tol && lv <= mark) ctx.done(true, 'ぴったり!');
+      else if (lv > 0) msg.textContent = cfg.low || 'まだ ひくいよ。もうすこし!';
+    };
+    b.addEventListener('pointerdown', e => { e.preventDefault(); on = true; });
+    ctx.on(window, 'pointerup', stop); ctx.on(window, 'pointercancel', stop);
+    ctx.on(window, 'keydown', e => { if ((e.code === 'Space' || e.key === 'Enter') && !e.repeat) { e.preventDefault(); on = true; } });
+    ctx.on(window, 'keyup', e => { if (e.code === 'Space' || e.key === 'Enter') stop(); });
+    ctx.loop(dt => {
+      if (!on) return;
+      lv += (lv < mark - .12 ? .5 : .1) * dt;
+      liq.style.height = Math.min(1, lv) * 100 + '%';
+      if (lv > mark) ctx.done(false, cfg.over || '標線をこえちゃった…');
+    });
+  },
+  mash(area, ctx, cfg) {                             // 連打してゲージをいっぱいにする
+    const emo = mgEl('mgemo', cfg.emo || '🧪');
+    const bar = mgEl('mgbar hz'), fill = mgEl('mgf'); bar.append(fill);
+    const msg = mgEl('mgmsg', cfg.msg || 'まざりぐあい');
+    const b = mgBtn(cfg.btn || 'ふる!');
+    area.append(emo, bar, msg, b);
+    let v = 0, n = 0;
+    ctx.loop(dt => { if (n > 0) v = Math.max(0, v - .14 * dt); fill.style.width = v * 100 + '%'; if (v >= 1) ctx.done(true); });
+    mgTap(b, ctx, () => {
+      n++; v = Math.min(1, v + .05); fill.style.width = v * 100 + '%';
+      emo.style.transform = cfg.spin === false ? 'scale(' + (1 + (n % 2) * .25) + ')' : 'rotate(' + (n % 2 ? 180 : 0) + 'deg)';
+      beep(200 + (n % 2) * 120, .04, 'square', .02);
+      if (v >= 1) ctx.done(true);                // ふった瞬間にいっぱいになったらせいこう
+    });
+  },
+  sort(area, ctx, cfg) {                             // 出てくる物質を、正しい仲間に仕分ける
+    const per = cfg.count / cfg.cats.length, pool = [];
+    cfg.cats.forEach((_, k) => pool.push(...cfg.items.filter(it => it[1] === k).sort(() => Math.random() - .5).slice(0, per)));
+    pool.sort(() => Math.random() - .5);
+    const item = mgEl('mgsort'), info = mgEl('mgmsg'), msg = mgEl('mgmsg'), row = mgEl('mgrow');
+    let i = 0, ok = 0, ng = 0;
+    const show = () => { item.textContent = pool[i][0]; info.textContent = (i + 1) + ' / ' + pool.length + ' もんめ(まちがい ' + ng + ')'; };
+    const pick = k => {
+      if (!ctx.alive()) return;
+      if (pool[i][1] === k) { ok++; beep(880, .06); msg.textContent = 'せいかい!'; }
+      else { ng++; beep(180, .15, 'sawtooth'); msg.textContent = 'ちがうよ… ' + pool[i][0] + ' は ' + cfg.cats[pool[i][1]]; }
+      if (ng > pool.length - cfg.need) return ctx.done(false, 'まちがいがおおいよ…');
+      i++;
+      if (i >= pool.length) return ctx.done(ok >= cfg.need);
+      show();
+    };
+    cfg.cats.forEach((c, k) => { const b = mgBtn(c); b.addEventListener('pointerdown', e => { e.preventDefault(); pick(k); }); row.append(b); });
+    area.append(item, info, msg, row); show();
+  },
+  pairs(area, ctx, cfg) {                            // ひだりとみぎを1つずつえらんで組み合わせる
+    const ps = cfg.pairs.slice().sort(() => Math.random() - .5).slice(0, cfg.pick);
+    const L = ps.map((p, k) => ({ t: p[0], k })), R = ps.map((p, k) => ({ t: p[1], k })).sort(() => Math.random() - .5);
+    const grid = mgEl('mgpairs'), msg = mgEl('mgmsg', 'ひだりとみぎを1つずつ えらんでね');
+    let sel = null, done = 0, miss = 0;
+    const mk = (o, side) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'mgpb'; b.textContent = o.t; o.el = b;
+      b.addEventListener('pointerdown', e => {
+        e.preventDefault(); if (!ctx.alive() || b.classList.contains('ok')) return;
+        if (!sel || sel.side === side) {                 // 1つめ(おなじ側ならえらびなおし)
+          if (sel) sel.o.el.classList.remove('sel');
+          sel = { o, side }; b.classList.add('sel'); return;
+        }
+        const a = sel; sel = null; a.o.el.classList.remove('sel');
+        if (a.o.k === o.k) {
+          a.o.el.classList.add('ok'); b.classList.add('ok'); beep(880, .08); msg.textContent = 'ぴったり!';
+          if (++done >= ps.length) ctx.done(true);
+        } else {
+          miss++; beep(180, .15, 'sawtooth'); msg.textContent = 'ちがうよ…(まちがい ' + miss + ' / ' + cfg.miss + ')';
+          if (miss >= cfg.miss) ctx.done(false, 'まちがいがおおいよ…');
+        }
+      });
+      return b;
+    };
+    const lc = mgEl('mgpc'), rc = mgEl('mgpc');
+    L.forEach(o => lc.append(mk(o, 'l'))); R.forEach(o => rc.append(mk(o, 'r')));
+    grid.append(lc, rc); area.append(grid, msg);
+  }
+};
+/* イベントカードを出す。ミニゲームのあるカードは、めくったあとに「ミニゲームスタート」で始まる(30秒)
+   もどり値: ミニゲームなし → undefined / あり → true(せいこう)・false(しっぱい) */
+function showEventCard(card, p) {
+  const game = EVENT_GAMES[card.id];
+  return new Promise((res, rej) => {
+    const g = gid, box = $('quizBox'), ok = $('quizOk'), hint = $('quizHint');
+    let finished = false, phase = 'card', result;
+    const rm = [];                                   // ミニゲームのイベントを外す関数たち
+    const alive = () => !finished && g === gid;
+    const finish = () => {
+      if (finished) return; finished = true;
+      rm.forEach(f => f()); rm.length = 0;
+      ok.textContent = 'つぎへ';
+      $('quiz').hidden = true; quizResolve = null;
+      g === gid ? res(result) : rej('cancel');
+    };
+    const startGame = () => {
+      phase = 'game'; ok.style.visibility = 'hidden'; ok.textContent = 'つぎへ';
+      const wrap = mgEl('mgw'), tm = mgEl('mgt'), lab = document.createElement('span'), bar = mgEl('bar'), fi = document.createElement('i');
+      bar.append(fi); tm.append(lab, bar); wrap.append(tm);
+      box.innerHTML = ''; box.append(wrap);
+      let over = false, sent = false, markFn = null;
+      const viaNet = net && !p.cpu, mine = !p.cpu && !p.remote;   // 人間の結果は みんなに送って、全員が同じ順で受けとる
+      const finishGame = (good, msg, pick) => {
+        if (over || !alive()) return; over = true;
+        rm.forEach(f => f()); rm.length = 0;
+        if (markFn && pick !== undefined && pick !== null) markFn(pick);
+        result = good; phase = 'result';
+        hint.textContent = msg || (good ? 'せいこう! +' + EVENT_PTS + 'P' : 'しっぱい…');
+        if (good) { beep(880, .1); beep(1175, .15, 'square', .04, .1); } else beep(180, .3, 'sawtooth');
+        ok.style.visibility = (p.cpu || p.remote) ? 'hidden' : 'visible';
+        if (p.cpu) setTimeout(() => { if (alive()) finish(); }, 1800);
+        else if (net) waitD(p, 'ok').then(() => { if (alive()) finish(); });
+      };
+      const end = (good, msg, pick) => {
+        if (over || !alive()) return;
+        if (viaNet) { if (!mine || sent) return; sent = true; sendD(p.idx, 'mg', { good, msg, pick }); return; }
+        finishGame(good, msg, pick);
+      };
+      if (viaNet) waitD(p, 'mg', () => ({ good: rng() < .6 })).then(d => finishGame(d.v.good, d.v.msg, d.v.pick));
+      const ctx = {
+        alive: () => alive() && !over && !sent, done: end,
+        loop(fn) {
+          let last = performance.now();
+          const step = t => { if (!ctx.alive()) return; const dt = Math.min(.05, (t - last) / 1000); last = t; fn(dt); requestAnimationFrame(step); };
+          requestAnimationFrame(step);
+        },
+        on(target, type, fn) { target.addEventListener(type, fn); rm.push(() => target.removeEventListener(type, fn)); }
+      };
+      const t0 = performance.now();
+      ctx.loop(() => {                               // 30秒のタイマー
+        const left = 30 - (performance.now() - t0) / 1000;
+        fi.style.width = Math.max(0, left / 30 * 100) + '%';
+        lab.textContent = 'のこり ' + Math.max(0, Math.ceil(left)) + 'びょう';
+        if (left <= 0) end(false, 'じかんぎれ…');
+      });
+      hint.textContent = (p.cpu || p.remote) ? p.name + 'がちょうせん中…' : 'ミニゲーム!';
+      if (game.t === 'quiz') {
+        const q0 = game.qs[Math.floor(rng() * game.qs.length)];
+        const sh = shuffleChoices(q0.c, q0.a), q = { ...q0, c: sh.c, a: sh.a };   // 選択肢の位置はランダム
+        const mark = pick => end(pick === q.a, undefined, pick);
+        const face2 = makeQuizCard({ q: q.q, c: q.c }, null, mine ? pick => { if (ctx.alive()) mark(pick); } : null);
+        markFn = pick => setQuizMarks(face2, { pick, ans: q.a });
+        wrap.append(face2);
+        if (p.cpu) setTimeout(() => {
+          if (!ctx.alive()) return;
+          const wrong = [0, 1, 2, 3].filter(i => i !== q.a);
+          mark(rng() < .6 ? q.a : wrong[Math.floor(rng() * 3)]);
+        }, 1500);
+        return;
+      }
+      const panel = mgEl('mg'), area = mgEl('mga');
+      panel.append(mgEl('mgn', card.name), mgEl('mgi', game.tip), area); wrap.append(panel);
+      if (p.cpu) {
+        area.append(mgEl('mgmsg', p.name + 'がプレイ中…'));
+        setTimeout(() => { if (ctx.alive()) end(rng() < .6); }, 1800 + rng() * 1200);
+      } else if (p.remote) area.append(mgEl('mgmsg', p.name + 'がプレイ中…'));
+      else MG[game.t](area, ctx, game);
+    };
+    const onOk = () => { if (g !== gid) return finish(); if (phase === 'card' && game) startGame(); else finish(); };
+    const face = makeEventCard(card);
+    ok.style.visibility = 'hidden'; hint.textContent = ''; box.innerHTML = '';
+    $('quiz').hidden = false;
+    quizResolve = onOk;
+    dealAnimation(face, hint, { ev: true, onDraw: renderEventDeck }).then(() => {
+      if (!alive()) return;
+      beep(784, 0.1); beep(988, 0.12, 'square', 0.04, 0.1);
+      if (game) {
+        hint.textContent = card.kind === 'f' ? 'ミニゲームにちょうせん!(30びょう)' : 'ミニゲームでピンチをのりきろう!(30びょう)';
+        ok.textContent = 'ミニゲームスタート'; ok.style.visibility = (p.cpu || p.remote) ? 'hidden' : 'visible';
+        if (p.cpu) setTimeout(() => { if (alive() && phase === 'card') startGame(); }, 1800);
+        else if (net) waitD(p, 'ok').then(() => { if (alive() && phase === 'card') onOk(); });
+      } else {
+        hint.textContent = 'イベント!';
+        ok.style.visibility = (p.cpu || p.remote) ? 'hidden' : 'visible';
+        if (p.cpu) setTimeout(() => { if (alive()) finish(); }, 1800);
+        else if (net) waitD(p, 'ok').then(() => { if (alive()) finish(); });
+      }
+    }).catch(e => {
+      if (finished) return;
+      finished = true; rm.forEach(f => f()); ok.textContent = 'つぎへ'; $('quiz').hidden = true; quizResolve = null; rej(e);
+    });
+  });
+}
+/* ミニゲームのれんしゅう(ひとの番のあいだだけ。山のカードはへらない) */
+async function practiceEvent(id) {
+  if (net || busy || quizResolve || !running || winner) return;
+  busy = true; render();
+  try { await showEventCard(EVENT_CARDS[id - 1], { cpu: false, name: 'れんしゅう' }); }
+  catch (e) { if (e !== 'cancel') console.error(e); }
+  if (running && !winner) { busy = false; render(); }
+}
+function renderPractice() {
+  const box = $('mgprac'); box.innerHTML = '';
+  Object.keys(EVENT_GAMES).forEach(k => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn sub'; b.style.margin = '3px';
+    b.textContent = k + ' ' + EVENT_CARDS[k - 1].name;
+    b.addEventListener('click', () => practiceEvent(+k));
+    box.append(b);
+  });
+}
+function showQuiz(card, p) {
+  return new Promise((res, rej) => {
+    const g = gid, box = $('quizBox'), ok = $('quizOk'), hint = $('quizHint');
+    let answered = false, finished = false, correct = false;
+    const finish = () => {
+      if (finished) return; finished = true;
+      $('quiz').hidden = true; quizResolve = null;
+      g === gid ? res(correct) : rej('cancel');
+    };
+    const answer = pick => {
+      if (answered || g !== gid) return; answered = true;
+      setQuizMarks(box.firstChild, { pick, ans: card.a });
+      const good = pick === card.a; correct = good;
+      hint.textContent = good ? 'せいかい! +' + card.lv + 'P' : 'ざんねん… せいかいは「' + ['ア', 'イ', 'ウ', 'エ'][card.a] + '」';
+      say(p.name + (good ? 'は せいかい!' : 'は ざんねん…'));
+      if (good) { beep(880, 0.1); beep(1175, 0.15, 'square', 0.04, 0.1); } else beep(180, 0.3, 'sawtooth');
+      ok.style.visibility = (p.cpu || p.remote) ? 'hidden' : 'visible';
+      if (p.cpu) setTimeout(() => { if (g === gid) finish(); }, 2200);   // COMは少ししたら自動で進む
+      else if (net) waitD(p, 'ok').then(() => { if (g === gid) finish(); });
+    };
+    let sentA = false;
+    const face = makeQuizCard(card, null, (p.cpu || p.remote) ? null : net ? pick => { if (sentA) return; sentA = true; sendD(p.idx, 'qa', pick); } : answer);
+    ok.style.visibility = 'hidden'; hint.textContent = ''; box.innerHTML = '';
+    $('quiz').hidden = false;
+    quizResolve = finish;                            // せっていにもどる時などは、ここから閉じる
+    dealAnimation(face, hint).then(() => {
+      if (g !== gid || finished) return;
+      hint.textContent = (p.cpu || p.remote) ? p.name + 'が考え中…' : p.name + ' こたえをタップしてね';
+      if (p.cpu) setTimeout(() => answer(cpuQuizPick(card)), 1300);   // COMは難しい問題ほどまちがえやすい
+      else if (net) waitD(p, 'qa', () => cpuQuizPick(card)).then(d => { if (g === gid && !finished) answer(d.v); });
+    }).catch(e => {
+      if (finished) return;
+      finished = true; $('quiz').hidden = true; quizResolve = null; rej(e);
+    });
+  });
+}
+
+/* ---------- 進行 ---------- */
+function hopTo(p, to, dur) {
+  p.anim = { a: slotXY(p.pos, p.idx), b: slotXY(to, p.idx), t0: performance.now(), dur };
+  moving = p.idx;
+  return sleep(dur).then(() => { p.pos = to; p.anim = null; moving = -1; render(); });
+}
+function isLastPlace(p) {                           // さいごの着順が確定した人(ほかの全員がゴール済みで、のこりはこの人だけ。2〜4人どの人数でも)
+  return !p.rank && goalCount >= 1 && players.filter(q => !q.rank).length === 1;
+}
+async function moveSteps(p, n) {
+  let dir = 1;
+  for (let i = 0; i < n; i++) {
+    let nx = p.pos + dir;
+    if (nx > GOAL) {
+      if (isLastPlace(p)) break;                     // さいごの着順が決まった人は、ぴったりでなくてもゴール
+      dir = -1; nx = p.pos + dir;
+    }
+    beep(420 + (nx % 40) * 6, 0.07);
+    await hopTo(p, nx, 230);
+  }
+}
+async function moveBack(p, n) {                    // 戻る: スタートより先にはもどらない
+  for (let i = 0; i < n && p.pos > 0; i++) {
+    beep(360 - i * 25, 0.08, 'triangle');
+    await hopTo(p, p.pos - 1, 230);
+  }
+}
+async function rollDice() {
+  for (let i = 0; i < 10; i++) { drawDice(1 + Math.floor(Math.random() * 6)); beep(180 + Math.random() * 120, 0.04, 'square', 0.03); await sleep(70); }
+  const n = rand6(); drawDice(n); beep(700, 0.12);
+  return n;
+}
+/* いまいるステージ番号をかえす(お知らせは出さない) */
+async function stageCheck(p, prev) {
+  return stageOf(p.pos);
+}
+async function playTurn() {
+  const p = players[cur];
+  busy = true; follow = true; render();
+  if (p.skip > 0) {
+    p.skip--;
+    say(p.name + 'は休み…' + (p.skip > 0 ? '(あと' + p.skip + '回)' : ''));
+    beep(200, 0.2, 'triangle');
+    await sleep(1100);
+    return endTurn(false);
+  }
+  say(p.rank ? p.name + 'の番だよ(ゴールずみ: 2か5でクイズ!)' : p.name + 'の番だよ');
+  if (p.cpu) { await sleep(800); return doRoll(); }
+  if (net) {                                        // 通信中: 人間のサイコロは、みんなに同じ順でとどく
+    busy = !!p.remote; render();
+    await waitD(p, 'roll');
+    if (!running) return;
+    follow = true; return doRoll();
+  }
+  busy = false; render();
+}
+/* ゴールずみの人のボーナスの番: サイコロが2か5ならクイズカードをひいて答える */
+async function bonusRoll(p) {
+  const n = await rollDice();
+  say(p.name + 'は ' + n + ' が出た!');
+  await sleep(600);
+  if (n !== 2 && n !== 5) {
+    say('2か5が出なかったので… クイズはおあずけ');
+    await sleep(1000);
+    return endTurn(false);
+  }
+  const card = drawQuizCard().card;
+  if (!card) {
+    say(n + '! でも クイズカードは もうないよ');
+    await sleep(1100);
+    return endTurn(false);
+  }
+  say(n + '! クイズカードを 1まいひくよ');
+  beep(880, 0.1); beep(1175, 0.12, 'square', 0.04, 0.1);
+  await sleep(500);
+  const right = await showQuiz(card, p);
+  if (right) addPts(p, card.lv, 'クイズせいかい');
+  return endTurn(false);
+}
+async function doRoll() {
+  busy = true; follow = true; render();
+  const p = players[cur];
+  if (p.rank) return bonusRoll(p);
+  let st = stageOf(p.pos);
+  const raw = await rollDice();
+  say(p.name + 'は ' + raw + ' が出た!');
+  await sleep(350);
+  await moveSteps(p, raw);
+  if (p.pos === GOAL) return reachGoal(p);
+  await stageCheck(p, st);
+  if (CELL_KIND[p.pos] === 'quiz') {                // クイズマス: カードを中央に
+    const card = drawQuizCard().card;
+    if (!card) {
+      say('クイズマス! でも クイズカードは もうないよ');
+      await sleep(1100);
+    } else {
+      say('クイズマス! クイズカードだよ');
+      beep(880, 0.1); beep(1175, 0.12, 'square', 0.04, 0.1);
+      await sleep(500);
+      const right = await showQuiz(card, p);
+      if (right) addPts(p, card.lv, 'クイズせいかい');
+    }
+  } else if (CELL_KIND[p.pos] === 'event') {        // イベントマス: カードをひいて、効果を使う
+    const card = drawEventCard().card;
+    if (!card) {
+      say('イベントマス! でも イベントカードは もうないよ');
+      await sleep(1100);
+    } else {
+      say('イベントマス! イベントカードだよ');
+      beep(880, 0.1); beep(1175, 0.12, 'square', 0.04, 0.1);
+      await sleep(500);
+      const r = await showEventCard(card, p);
+      if (r === true) { say(p.name + 'は ミニゲーム せいこう!'); addPts(p, EVENT_PTS, 'ミニゲーム'); }
+      else if (r === false) say(p.name + 'は ミニゲーム しっぱい…');
+      await sleep(500);
+      await applyEvent(card, p, r);
+      if (p.pos === GOAL) return reachGoal(p);
+    }
+  }
+  else if (CELL_KIND[p.pos] === 'skip') {           // 休みマス: 1〜2回休み
+    const n = CELL_VAL[p.pos];
+    say('休みマス! ' + p.name + 'は ' + n + '回休み…');
+    beep(300, 0.15, 'triangle'); beep(220, 0.25, 'triangle', 0.04, 0.15);
+    p.skip = n; render();
+    await sleep(1100);
+  } else if (CELL_KIND[p.pos] === 'back' || CELL_KIND[p.pos] === 'backdice') {   // 戻るマス
+    let n;
+    if (CELL_KIND[p.pos] === 'back') {
+      n = CELL_VAL[p.pos];
+      say('戻るマス! ' + n + 'マス戻るよ…');
+      beep(260, 0.15, 'sawtooth');
+    } else {
+      say('サイコロ戻るマス! サイコロで戻るマスを決めるよ');
+      await sleep(600);
+      n = await rollDice();
+      say(p.name + 'は ' + n + ' が出た! ' + n + 'マス戻るよ…');
+    }
+    await sleep(600);
+    await retreat(p, n);                             // 戻った先のマスの効果は発動しない
+  }
+  return endTurn(false);
+}
+/* ---------- イベントカードの効果 ---------- */
+async function retreat(q, n) {                      // 後退
+  const st = stageOf(q.pos);
+  await moveBack(q, n);
+  await stageCheck(q, st);
+}
+async function advance(q, n) {                      // 前進(ゴールをこえたら、あまった分だけもどる)
+  const st = stageOf(q.pos);
+  await moveSteps(q, n);
+  if (q.pos !== GOAL) await stageCheck(q, st);
+}
+async function applyEvent(card, p, r) {
+  const name = p.name, n = card.n;
+  const fwd = async k => { say(name + 'は ' + k + 'マス すすむ!'); await sleep(400); await advance(p, k); };
+  const back = async k => { say(name + 'は ' + k + 'マス もどる…'); await sleep(400); await retreat(p, k); };
+  const rest = k => { p.skip += k; say(name + 'は 次のターンを' + k + '回 休む…'); beep(300, 0.15, 'triangle'); render(); };
+  if (card.kind === 'f') {                           // 進むカード: ミニゲームがあれば、せいこうしたときだけ進む
+    if (r === false) say(name + 'は その場にとどまる…');
+    else await fwd(n);
+  } else if (r === true) {                           // 戻る・休みカード: ミニゲームにせいこうしたらセーフ
+    say(name + 'は ミニゲームで ピンチをのりきった!');
+  } else if (card.kind === 'b') await back(n);
+  else rest(n);
+  await sleep(500);
+}
+async function endTurn(again) {
+  if (!again) cur = (cur + 1) % players.length;     // ゴール済みの人も ボーナスの番がある
+  await sleep(300);
+  return playTurn();
+}
+function addPts(p, n, why) {
+  p.pts += n;
+  say(p.name + 'は ' + why + ' +' + n + 'P!(ごうけい ' + p.pts + 'P)');
+  render();
+}
+const fanfare = () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => beep(f, 0.18, 'square', 0.05, i * 0.16));
+async function reachGoal(p) {
+  follow = true;
+  p.rank = ++goalCount;
+  const gp = GOAL_PTS[p.rank - 1] || 0;
+  p.pts += gp;
+  say('★ ' + p.name + 'が ' + p.rank + '着でゴール! +' + gp + 'P ★');
+  fanfare(); render();
+  await sleep(1600);
+  if (players.every(q => q.rank)) return gameOver();
+  const lp = players.find(q => !q.rank);
+  if (lp && isLastPlace(lp)) say(lp.name + 'が ' + (goalCount + 1) + '着に決まったよ! ぴったりの目でなくても ゴールできるよ');
+  return endTurn(false);
+}
+async function gameOver() {
+  const order = players.slice().sort((a, b) => b.pts - a.pts || a.rank - b.rank);
+  const top = order[0];
+  winner = top; busy = true; follow = true; render();
+  say('全員ゴール! ' + top.name + 'が ' + top.pts + 'Pで ゆうしょう!');
+  fanfare();
+  conf = [];
+  const pal = ['#ffd23f', '#e63946', '#3a86ff', '#7ed957', '#fff', '#b05be8'];
+  for (let i = 0; i < 80; i++) conf.push({ x: Math.random() * W, y: -Math.random() * 330, vx: (Math.random() - .5) * .6, vy: .5 + Math.random() * 1.2, c: pal[i % pal.length] });
+  await sleep(1600);
+  $('overT').textContent = '★ ' + top.name + 'の かち! ★';
+  const box = $('overList'); box.innerHTML = '';
+  order.forEach((q, i) => {
+    const d = document.createElement('div'); d.className = 'lg';
+    const c = document.createElement('i'); c.style.background = q.color;
+    const t = document.createElement('span');
+    t.textContent = (i + 1) + '位 ' + q.name + '  ' + q.pts + 'P(' + q.rank + '着)';
+    d.append(c, t); box.append(d);
+  });
+  $('over').hidden = false;
+}
+
+/* ---------- 開始・設定 ---------- */
+function newGame() {
+  gid++;
+  if (quizResolve) quizResolve();
+  quizUsed = new Set(); eventUsed = new Set();
+  conf = []; winner = null; moving = -1; cur = 0; logLines = []; follow = true; goalCount = 0;
+  players = [];
+  rng = net ? mkRng(netSeed) : Math.random;
+  srng = net ? mkRng((netSeed ^ 0x9E3779B9) >>> 0) : Math.random;
+  (net ? netPlayModes : setupModes).forEach((m, i) => {
+    if (m === 2) return;
+    players.push({ idx: players.length, slot: i, human0: m === 0, remote: net && m === 0 && i !== mySlot, q: [], qw: null, color: COLORS[i], cpu: m === 1, name: (m === 1 ? 'COM' : '') + (i + 1) + (m === 1 ? '' : 'P'), pos: 0, skip: 0, pts: 0, rank: 0, anim: null });
+  });
+  $('over').hidden = true;
+  $('again').hidden = net && role !== 'host'; $('overNote').hidden = !(net && role !== 'host');
+  $('menu').textContent = net ? 'ローカル対戦をやめる' : 'せっていにもどる';
+  $('toMenu').textContent = net ? 'ローカル対戦にもどる' : 'せってい';
+  showScreen('game');
+  vp.scrollTop = vp.scrollHeight;                       // スタート(いちばん下)から
+  running = true; busy = true;
+  drawDice(1);
+  renderDeck(); renderEventDeck();
+  say('スタート! 100マスのゴールをめざせ!');
+  render();
+  playTurn().catch(e => { if (e !== 'cancel') console.error(e); });
+}
+function toMenu() {
+  gid++; if (quizResolve) quizResolve();
+  running = false; conf = []; winner = null; moving = -1;
+  $('over').hidden = true; showScreen('setup');
+}
+function showScreen(id) {
+  ['home', 'howto', 'local', 'lobby', 'setup', 'game'].forEach(k => { $(k).hidden = k !== id; });
+  window.scrollTo(0, 0);
+}
+function renderSetup() {
+  const isNet = setupKind === 'net', arr = isNet ? netModes : setupModes;
+  $('setupTitle').textContent = isNet ? 'ローカル対戦: 対戦する友だちをえらぼう' : 'あそぶ人をえらぼう';
+  $('setupNote').textContent = isNet ? 'あなたは1P(ホスト)です。2P〜4Pの「人間」の数だけ、友だちがへやに入れます(あなた以外は最大3人)。友だち: ' + netModes.slice(1).filter(m => m === 0).length + '人' : '';
+  $('start').textContent = isNet ? 'へやを作る' : 'ゲームスタート';
+  const box = $('srows'); box.innerHTML = '';
+  const labels = isNet ? ['人間(友だち)', 'COM', 'なし'] : MODE_LABEL;
+  arr.forEach((m, i) => {
+    const row = document.createElement('div'); row.className = 'srow';
+    const chip = document.createElement('span'); chip.className = 'chip'; chip.style.background = COLORS[i];
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = (i + 1) + 'P';
+    row.append(chip, nm);
+    if (isNet && i === 0) {
+      const t = document.createElement('span'); t.textContent = 'あなた(ホスト)'; row.append(t);
+    } else {
+      const b = document.createElement('button'); b.className = 'btn sub'; b.type = 'button'; b.textContent = labels[m];
+      b.addEventListener('click', () => { arr[i] = (arr[i] + 1) % 3; $('err').textContent = ''; renderSetup(); });
+      row.append(b);
+    }
+    box.append(row);
+  });
+}
+function renderKindList() {
+  ['kindlist', 'kindlist3'].forEach(id => {
+  const box = $(id); box.innerHTML = '';
+  Object.keys(KINDS).forEach(key => {
+    const k = KINDS[key];
+    const d = document.createElement('div'); d.className = 'lg';
+    const c = document.createElement('i'); c.style.background = k.cols ? k.cols[0] : '#dcdcdc';
+    const t = document.createElement('span');
+    t.textContent = k.label + '';
+    d.append(c, t); box.append(d);
+  });
+  });
+}
+/* ---------- ローカル通信対戦(友だちとPeerJSでつなぐ。つなぎかた・QRコード・診断などは indexB33.html から) ----------
+   しくみ: 全員が同じ乱数(たねをホストがくばる)で同じゲームを動かし、人間の「ふる・こたえる・つぎへ・ミニゲームの結果」だけを
+   ホスト経由で全員に同じ順番でとどけます。つながっている人が切れたら、その人はCOMにかわります。 */
+const VER = 'sugoroku-2026.10.12';
+// 自前のTURNサーバーを持っている場合は、ここに追加すると接続しやすくなります
+const MY_TURN = [];
+const ICE=[...MY_TURN,{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'},{urls:'stun:stun.cloudflare.com:3478'},{urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}];
+// ===== QRコード作成(バイトモード・誤り訂正L・バージョン1〜10。外部ライブラリなし) =====
+function qrMake(text){
+ const bytes=Array.from(new TextEncoder().encode(text)),ECC=[0,7,10,15,20,26,18,20,24,30,18],NB=[0,1,1,1,1,1,2,2,2,2,4];
+ const raw=v=>{let r=(16*v+128)*v+64;if(v>=2){const a=Math.floor(v/7)+2;r-=(25*a-10)*a-55;if(v>=7)r-=36}return r};
+ let ver=1;for(;ver<=10;ver++){const cap=Math.floor(raw(ver)/8)-ECC[ver]*NB[ver],cb=ver<10?8:16;if(4+cb+bytes.length*8<=cap*8)break}
+ if(ver>10)return null;
+ const size=ver*4+17,dcw=Math.floor(raw(ver)/8)-ECC[ver]*NB[ver];
+ const bits=[],put=(v,n)=>{for(let i=n-1;i>=0;i--)bits.push((v>>>i)&1)};
+ put(4,4);put(bytes.length,ver<10?8:16);bytes.forEach(b=>put(b,8));
+ put(0,Math.min(4,dcw*8-bits.length));while(bits.length%8)bits.push(0);
+ for(let p=0xEC;bits.length<dcw*8;p^=0xEC^0x11)put(p,8);
+ const data=[];for(let i=0;i<bits.length;i+=8){let b=0;for(let j=0;j<8;j++)b=b<<1|bits[i+j];data.push(b)}
+ // ガロア体(256)とリード・ソロモン符号
+ const EXP=[],LOG=[];{let x=1;for(let i=0;i<255;i++){EXP[i]=x;LOG[x]=i;x<<=1;if(x&256)x^=0x11D}for(let i=255;i<512;i++)EXP[i]=EXP[i-255]}
+ const mul=(a,b)=>a&&b?EXP[LOG[a]+LOG[b]]:0;
+ const ec=ECC[ver],gen=[1];for(let i=0;i<ec;i++){const n=Array(gen.length+1).fill(0);for(let j=0;j<gen.length;j++){n[j]^=gen[j];n[j+1]^=mul(gen[j],EXP[i])}gen.length=0;gen.push(...n)}
+ const rs=d=>{const r=Array(ec).fill(0);for(const b of d){const f=b^r.shift();r.push(0);for(let i=0;i<ec;i++)r[i]^=mul(gen[i+1],f)}return r};
+ const nb=NB[ver],tot=Math.floor(raw(ver)/8),ns=nb-tot%nb,sl=Math.floor(tot/nb),blocks=[];
+ for(let i=0,k=0;i<nb;i++){const l=sl-ec+(i<ns?0:1),d=data.slice(k,k+l);k+=l;blocks.push({d,e:rs(d)})}
+ const out=[];for(let i=0;i<blocks[nb-1].d.length;i++)blocks.forEach(b=>{if(i<b.d.length)out.push(b.d[i])});
+ for(let i=0;i<ec;i++)blocks.forEach(b=>out.push(b.e[i]));
+ // 模様の配置
+ const M=Array.from({length:size},()=>Array(size).fill(0)),F=Array.from({length:size},()=>Array(size).fill(false));
+ const setF=(x,y,v)=>{M[y][x]=v?1:0;F[y][x]=true};
+ for(let i=0;i<size;i++){setF(6,i,i%2===0);setF(i,6,i%2===0)}
+ const finder=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=cx+dx,y=cy+dy;if(x<0||y<0||x>=size||y>=size)continue;const d=Math.max(Math.abs(dx),Math.abs(dy));setF(x,y,d!==2&&d!==4)}};
+ finder(3,3);finder(size-4,3);finder(3,size-4);
+ if(ver>=2){const na=Math.floor(ver/7)+2,step=Math.ceil((ver*4+4)/(na*2-2))*2,pos=[6];for(let p=size-7;pos.length<na;p-=step)pos.splice(1,0,p);
+  for(let i=0;i<na;i++)for(let j=0;j<na;j++){if((i===0&&j===0)||(i===0&&j===na-1)||(i===na-1&&j===0))continue;for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++)setF(pos[i]+dx,pos[j]+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1)}}
+ const fmt=mask=>{let d=(1<<3|mask),r=d;for(let i=0;i<10;i++)r=r<<1^((r>>>9)*0x537);const b=(d<<10|r)^0x5412,g=i=>((b>>>i)&1)!==0;
+  for(let i=0;i<=5;i++)setF(8,i,g(i));setF(8,7,g(6));setF(8,8,g(7));setF(7,8,g(8));for(let i=9;i<15;i++)setF(14-i,8,g(i));
+  for(let i=0;i<8;i++)setF(size-1-i,8,g(i));for(let i=8;i<15;i++)setF(8,size-15+i,g(i));setF(8,size-8,true)};
+ fmt(0);
+ if(ver>=7){let r=ver;for(let i=0;i<12;i++)r=r<<1^((r>>>11)*0x1F25);const b=ver<<12|r;for(let i=0;i<18;i++){const v=((b>>>i)&1)!==0,a=size-11+i%3,c=Math.floor(i/3);setF(a,c,v);setF(c,a,v)}}
+ // データを書きこむ
+ let bi=0;for(let right=size-1;right>=1;right-=2){if(right===6)right=5;for(let vert=0;vert<size;vert++)for(let j=0;j<2;j++){const x=right-j,up=((right+1)&2)===0,y=up?size-1-vert:vert;if(!F[y][x]&&bi<out.length*8){M[y][x]=(out[bi>>>3]>>>(7-(bi&7)))&1;bi++}}}
+ const MK=[(x,y)=>(x+y)%2===0,(x,y)=>y%2===0,(x,y)=>x%3===0,(x,y)=>(x+y)%3===0,(x,y)=>(Math.floor(x/3)+Math.floor(y/2))%2===0,(x,y)=>x*y%2+x*y%3===0,(x,y)=>(x*y%2+x*y%3)%2===0,(x,y)=>((x+y)%2+x*y%3)%2===0];
+ const apply=m=>{for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(!F[y][x]&&MK[m](x,y))M[y][x]^=1};
+ const pen=()=>{let p=0;const line=g=>{let run=1;for(let i=1;i<size;i++){if(g(i)===g(i-1)){run++;if(run===5)p+=3;else if(run>5)p++}else run=1}};
+  for(let y=0;y<size;y++)line(i=>M[y][i]);for(let x=0;x<size;x++)line(i=>M[i][x]);
+  for(let y=0;y<size-1;y++)for(let x=0;x<size-1;x++){const c=M[y][x];if(c===M[y][x+1]&&c===M[y+1][x]&&c===M[y+1][x+1])p+=3}
+  const pat=[1,0,1,1,1,0,1,0,0,0,0],pr=[0,0,0,0,1,0,1,1,1,0,1];
+  const fin=g=>{for(let i=0;i+11<=size;i++){let a=true,b=true;for(let k=0;k<11;k++){if(g(i+k)!==pat[k])a=false;if(g(i+k)!==pr[k])b=false}if(a||b)p+=40}};
+  for(let y=0;y<size;y++)fin(i=>M[y][i]);for(let x=0;x<size;x++)fin(i=>M[i][x]);
+  let d=0;for(const r of M)for(const c of r)d+=c;const k=Math.ceil(Math.abs(d*20-size*size*10)/(size*size))-1;p+=Math.max(0,k)*10;return p};
+ let best=0,bp=1e9;for(let m=0;m<8;m++){apply(m);fmt(m);const p=pen();if(p<bp){bp=p;best=m}apply(m)}
+ apply(best);fmt(best);
+ return M}
+function qrSvg(text,px){const M=qrMake(text);if(!M)return '';const n=M.length,q=4;let d='';for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(M[y][x])d+='M'+(x+q)+' '+(y+q)+'h1v1h-1z';
+ return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(n+q*2)+' '+(n+q*2)+'" width="'+px+'" height="'+px+'" shape-rendering="crispEdges" style="background:#fff;display:inline-block"><path d="'+d+'" fill="#000"/></svg>'}
+const mkCode=()=>Array.from({length:5},()=>'abcdefghjkmnpqrstuvwxyz23456789'[Math.random()*31|0]).join('');
+function mkRng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let net = false, role = 'solo', peer = null, conns = [], conn = null, mySlot = 0, wl = null, retryFn = null, netPhase = 'idle';
+let netModes = [0, 0, 2, 2], setupKind = 'cpu', netPlayModes = null, netSeed = 1;   // netModes: ローカル対戦のせってい(0:人間 1:COM 2:なし)
+let lob = { code: '', n: 0, c: 1, st: [], names: [], hs: [], msg: '' };
+const humanSlots = () => [1, 2, 3].filter(i => netModes[i] === 0);
+
+function netClose() { try { peer && peer.destroy(); } catch (e) {} peer = conn = null; conns = []; try { wl && wl.release(); } catch (e) {} wl = null; }
+async function wake() { try { if (typeof navigator !== 'undefined' && navigator.wakeLock && !wl && document.visibilityState === 'visible') { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => { wl = null; }); } } catch (e) { wl = null; } }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && role !== 'solo') wake(); });
+const bcast = (m, except) => conns.forEach((c, i) => { if (i !== except && c && c.open) try { c.send(m); } catch (e) {} });
+
+/* 人間のそうさ(roll / qa / ok / mg / cpu)を、全員に同じ順でとどける */
+function pushD(d) { const p = players[d.i]; if (!p) return; p.q.push(d); if (p.qw) { const f = p.qw; p.qw = null; f(); } }
+function sendD(i, k, v) {
+  if (!net) return;
+  if (role === 'host') { const d = { t: 'd', i, k, v }; pushD(d); bcast(d); }
+  else if (conn && conn.open) try { conn.send({ t: 'u', i, k, v }); } catch (e) {}
+}
+async function waitD(p, k, dflt) {
+  for (;;) {
+    if (p.cpu) { await sleep(1000); return { v: dflt ? dflt() : null }; }      // つうしんが切れてCOMになった人
+    const j = p.q.findIndex(d => d.k === k || d.k === 'cpu');
+    if (j >= 0) {
+      const d = p.q.splice(j, 1)[0];
+      if (d.k === 'cpu') { p.cpu = true; p.remote = false; say(p.name + 'は つうしんが切れたので COMになったよ'); render(); continue; }
+      return d;
+    }
+    await new Promise(r => { p.qw = r; });
+  }
+}
+function cpuQuizPick(card) {
+  const rate = [0, 0.8, 0.65, 0.5, 0.35][card.lv] || 0.5;
+  const wrong = [0, 1, 2, 3].filter(i => i !== card.a);
+  return rng() < rate ? card.a : wrong[Math.floor(rng() * wrong.length)];
+}
+
+/* ---- 画面(ローカル対戦メニュー・へや) ---- */
+const HELP_HTML = `
+<details open><summary>つなぎかた</summary>
+<p>1. 1人が「へやを作る」をおして、友だちの人数(1〜3人)をえらびます。5文字のへやコードとQRコードが出ます。</p>
+<p>2. 友だちは、この同じページ(おなじURL)を開いて「コードで参加」にへやコードを入れます。ホストの画面のQRコードをカメラで読みとっても参加できます。</p>
+<p>3. えらんだ人数がそろうと、自動でゲームがはじまります。「つながっている人」で、いま何人つながっているか見られます。</p>
+<p>※インターネットにつながっている必要があります(おなじWi-Fiでなくても遊べます)。ホストと友だちは、おなじバージョンのページを開いてください。遊んでいるあいだは、画面を消さないでね(スリープすると切れることがあります)。</p>
+</details>
+<details><summary>QRコードでつなぐ</summary>
+<p>ホストが「へやを作る」と、へやコードの下にQRコードが出ます。友だちはスマホのカメラでそれを読みとって、出てきたページを開くだけで、自動でへやに入ります(コードを打たなくてOK)。</p>
+<p>QRコードは、ページを http(s) のURLで開いているときだけ出ます。ファイルをそのまま開いている(file://)ときは出ないので、へやコードを つたえてね。</p>
+</details>
+<details><summary>つながらないとき</summary>
+<p>・「接続サーバーにつながっていません」: ネット接続を確認して、少し待ってからもう一度ためしてね。</p>
+<p>・「部屋が見つかりません」: コードの打ちまちがいか、ホストが へやを閉じたかもしれません。コードをたしかめてね。</p>
+<p>・「通信経路を作れませんでした」: 会社・学校の回線や、一部のWi-Fiで起きます。モバイル通信に切りかえるか、べつの回線でためしてね。</p>
+<p>・「バージョンがちがいます」: ページを再読み込み(キャッシュの更新)して、もう一度つないでね。</p>
+<p>・エラーの最後の「診断」は、サーバー・部屋・通信経路のどこまで届いたか(○と×)を表します。「もう一度つなぐ」で、同じ条件でやり直せます。</p>
+<p>・ゲーム中に切れた人は、COMにかわってゲームが続きます。</p>
+</details>`;
+function showLocal(note) {
+  showScreen('local');
+  $('localNote').textContent = note || '';
+  $('localRetry').hidden = !retryFn;
+}
+function renderLobby() {
+  const host = role === 'host', rc = $('lobCode');
+  $('lobTitle').textContent = host ? 'へやを作ったよ' : 'ホストにつないでいるよ';
+  if (host) {
+    let qh = '';
+    try { if (/^https?:$/.test(location.protocol)) { const sv = qrSvg(location.href.split('#')[0].split('?')[0] + '#room=' + lob.code, 168); if (sv) qh = '<div class="qr">' + sv + '</div><small>QRコードをカメラで読みとっても参加できるよ</small>'; } } catch (e) {}
+    rc.innerHTML = '<small>へやコード(友だちにつたえてね)</small><div class="cd">' + lob.code.toUpperCase() + '</div>' + qh; rc.hidden = false;
+  } else { rc.innerHTML = ''; rc.hidden = true; }
+  $('lobCount').textContent = 'つながっている人: ' + lob.c + ' / ' + (lob.n + 1) + '人(あなたをふくむ)';
+  const box = $('lobSlots'); box.innerHTML = '';
+  for (let i = 0; i < lob.n; i++) {
+    const d = document.createElement('div'); d.className = 'lg';
+    const ok = !!lob.st[i];
+    const c = document.createElement('i'); c.style.background = ok ? '#7ed957' : '#8a8a9a';
+    const t = document.createElement('span'); t.textContent = (lob.names[i] || (i + 2) + 'P') + ' の友だち: ' + (ok ? 'つながった' : 'まっています…');
+    d.append(c, t); box.append(d);
+  }
+  $('lobMsg').textContent = lob.msg || '';
+}
+function netLeave(note, fn) {
+  netClose(); net = false; role = 'solo'; netPhase = 'idle';
+  gid++; if (quizResolve) quizResolve();
+  running = false; conf = []; winner = null; moving = -1;
+  $('over').hidden = true; $('quiz').hidden = true;
+  retryFn = fn || null;
+  showLocal(note);
+}
+function lobbyUpdate() {
+  const st = []; for (let i = 1; i <= lob.n; i++) st.push(!!(conns[i] && conns[i].open));
+  lob.st = st; lob.c = 1 + st.filter(Boolean).length; renderLobby();
+  bcast({ t: 'l', st, n: lob.n, names: lob.names });
+}
+function startNetGame(seed, modes, me) {
+  net = true; mySlot = me; netSeed = seed; netPlayModes = modes.slice();
+  newGame();
+}
+function hostSendStart() {                          // ホスト: たねをきめて、全員にゲーム開始をつたえる
+  netSeed = (Math.random() * 4294967296) >>> 0;
+  lob.hs.forEach((s, k) => { const c = conns[k + 1]; if (!(c && c.open)) netModes[s] = 1; });   // 切れた人はCOM
+  const modes = netModes.slice();
+  lob.hs.forEach((s, k) => { const c = conns[k + 1]; if (c && c.open) try { c.send({ t: 'g', seed: netSeed, modes, me: s }); } catch (e) {} });
+  startNetGame(netSeed, modes, 0);
+}
+function dropGuest(id) {                            // ゲーム中に切れた友だち: みんなの画面でCOMにかわる
+  const s = lob.hs[id - 1]; if (s === undefined) return;
+  netModes[s] = 1;
+  const p = players.find(q => q.slot === s);
+  if (p && !p.cpu) { const m = { t: 'd', i: p.idx, k: 'cpu', v: null }; pushD(m); bcast(m, id); }
+  render();
+}
+
+function netStart(host, code, tc = 0) {
+  if (typeof Peer === 'undefined') { netLeave('つうしんライブラリを読み込めませんでした。ネット接続を確認して、ページを開き直してください'); return; }
+  netClose(); role = host ? 'host' : 'guest'; net = false; netPhase = 'lobby'; retryFn = null;
+  const hs = host ? humanSlots() : [];
+  lob = { code, n: hs.length, c: 1, st: [], names: hs.map(s => (s + 1) + 'P'), hs, msg: host ? '友だちがつながるのを まっています…' : 'ホストに接続中…' };
+  showScreen('lobby'); renderLobby(); wake();
+  const cfg = { config: { iceServers: ICE, iceCandidatePoolSize: host ? 0 : 1 }, debug: 0 };
+  const pr = host ? new Peer('sgr' + code, cfg) : new Peer(cfg); peer = pr;
+  const alive = () => peer === pr;
+  const rx = [];
+  const cntC = () => { let k = 0; for (let i = 1; i <= lob.n; i++) if (conns[i] && conns[i].open) k++; return k; };
+  let started = false;
+  // ホスト側: 友だちごとの接続。あいさつ(t:'a')は、相手から何か届くまで1秒ごとに再送する
+  const tryFull = () => {
+    if (netPhase !== 'lobby' || started || cntC() < lob.n) return;
+    started = true; lob.msg = 'ぜんいん そろったよ! まもなくはじまるよ'; renderLobby();
+    setTimeout(() => {
+      if (!alive() || netPhase !== 'lobby') return;
+      if (cntC() < lob.n) { started = false; lob.msg = '友だちがつながるのを まっています…'; lobbyUpdate(); return; }
+      netPhase = 'play'; hostSendStart();
+    }, 1500);
+  };
+  const bindH = (c, id) => {
+    conns[id] = c; rx[id] = Date.now(); c.on('error', () => {});
+    let got = 0, hv = null;
+    const hello = () => { try { if (c.open) c.send({ t: 'a', id, slot: lob.hs[id - 1], n: lob.n, names: lob.names, v: VER }); } catch (e) {} };
+    const ready = () => {
+      if (!alive() || conns[id] !== c) return; hello();
+      if (!hv) hv = setInterval(() => { if (!alive() || conns[id] !== c || got) { clearInterval(hv); return; } hello(); }, 1000);
+      lobbyUpdate(); tryFull();
+    };
+    c.on('open', ready); if (c.open) ready();
+    c.on('data', d => {
+      if (!d || !alive()) return; got = 1; rx[id] = Date.now();
+      if (d.t === 'u') {                              // 友だちのそうさ → 全員にくばる
+        const p = players[d.i];
+        if (net && p && p.slot === lob.hs[id - 1] && !p.cpu) { const m = { t: 'd', i: d.i, k: d.k, v: d.v }; pushD(m); bcast(m); }
+      }
+    });
+    c.on('close', () => {
+      clearInterval(hv); if (!alive() || conns[id] !== c) return;
+      conns[id] = null;
+      if (netPhase === 'lobby') { started = false; lob.msg = '友だちがつながるのを まっています…'; lobbyUpdate(); }
+      else if (net) { dropGuest(id); lobbyUpdate(); }
+    });
+  };
+  // 友だち側: つながるまで最大5回、8秒ごとにつなぎ直す
+  let est = false, tries = 0, rt = null, sig = false, opened = false, unav = 0, lastRx = Date.now();
+  const diag = () => '(診断:サーバー' + (sig ? '○' : '×') + ' 部屋' + (opened || (sig && !unav) ? '○' : '×') + ' 通信経路' + (opened ? '○' : '×') + ')';
+  const why = () => (!sig ? '接続サーバーにつながっていません。ネット接続を確認するか、少し待ってからお試しください。' : unav && !opened ? '部屋が見つかりません。コードの打ち間違いか、ホストが部屋を閉じた可能性があります。' : !opened ? 'ホストは見つかりましたが、通信経路を作れませんでした。会社・学校の回線や一部のWi-Fiで起きます。モバイル通信に切り替えるか、別の回線でお試しください。' : 'つながりましたが、ホストから応答がありませんでした。ページを再読み込みしてお試しください。') + diag();
+  const again = () => host ? netStart(true, mkCode()) : netStart(false, code);
+  const bindG = c => {
+    conn = c; c.on('error', () => {}); c.on('open', () => { opened = true; });
+    c.on('data', d => {
+      if (!d || !alive() || c !== conn) return; lastRx = Date.now();
+      if (d.t === 'a') {
+        if (d.v !== VER) { netLeave('ホストとゲームのバージョンが違います。ページを再読み込みして(キャッシュを更新して)もう一度お試しください'); return; }
+        est = true; clearTimeout(rt); mySlot = d.slot; lob.n = d.n; lob.names = d.names || [];
+        lob.msg = 'つながったよ! ホストがはじめるのを まっています…';
+        try { c.send({ t: 'r' }); } catch (e) {}
+        renderLobby();
+      } else if (d.t === 'l') {
+        lob.st = d.st || []; lob.n = d.n; lob.names = d.names || []; lob.c = 1 + lob.st.filter(Boolean).length; renderLobby();
+      } else if (d.t === 'g') { netPhase = 'play'; startNetGame(d.seed, d.modes, d.me); }
+      else if (d.t === 'd') pushD(d);
+    });
+    c.on('close', () => {
+      if (!alive() || c !== conn || !est) return;
+      netLeave(netPhase === 'play' ? 'ホストとの接続が切れました。ホストが退出した可能性があります。' : 'ホストが退出しました');
+    });
+  };
+  const tryConn = () => {
+    if (!alive() || est) return;
+    if (tries >= 5) { netLeave(why(), again); return; }
+    tries++; lob.msg = 'ホストに接続中…' + (tries > 1 ? '(' + tries + '回目)' : ''); renderLobby();
+    if (conn) { try { conn.close(); } catch (e) {} }
+    try { bindG(pr.connect('sgr' + code, { reliable: true })); } catch (e) {}
+    const t0 = Date.now(); clearTimeout(rt);
+    const chk = () => {
+      if (!alive() || est) return;
+      const c = conn, s = c && c.peerConnection && c.peerConnection.iceConnectionState;
+      if (((s === 'checking' || s === 'connected' || s === 'completed') || (c && c.open)) && Date.now() - t0 < 25000) { rt = setTimeout(chk, 1500); return; }
+      setTimeout(tryConn, Math.random() * 800);
+    };
+    rt = setTimeout(chk, 8000);
+  };
+  // 無通信の検出: 2秒ごとに生存信号をおくり、15秒なにも届かなければ切れたとみなす
+  let tick = 0;
+  const hb = setInterval(() => {
+    if (!alive()) { clearInterval(hb); return; }
+    const now = Date.now(); tick++;
+    if (host) {
+      conns.forEach((c, i) => { if (i && c && c.open && now - (rx[i] || now) > 15000) try { c.close(); } catch (e) {} });
+      if (tick % 2 === 0) bcast({ t: 'p' });
+    } else {
+      if (est && now - lastRx > 15000) { netLeave('ホストからの応答がなくなりました。ホストが退出したか、通信が切れた可能性があります。'); return; }
+      if (est && tick % 2 === 0 && conn && conn.open) try { conn.send({ t: 'p' }); } catch (e) {}
+    }
+  }, 1000);
+  pr.on('open', () => { if (!alive()) return; const first = !sig; sig = true; if (!host && first) setTimeout(tryConn, Math.random() * 1200); });
+  pr.on('disconnected', () => { const re = () => { if (!alive() || pr.destroyed || !pr.disconnected) return; try { pr.reconnect(); } catch (e) {} setTimeout(re, 3000); }; re(); });
+  pr.on('connection', c => {
+    if (!alive() || !host || netPhase !== 'lobby') { c.close(); return; }
+    let id = 0; for (let i = 1; i <= lob.n; i++) if (conns[i] && conns[i].peer === c.peer) { id = i; break; }
+    if (id) { const o = conns[id]; conns[id] = null; try { o.close(); } catch (e) {} }
+    else {
+      id = 1; while (id <= lob.n && conns[id] && (conns[id].open || Date.now() - (conns[id]._t || 0) < 12000)) id++;
+      if (id > lob.n) { c.close(); return; }
+      if (conns[id]) { const o = conns[id]; conns[id] = null; try { o.close(); } catch (e) {} }
+    }
+    c._t = Date.now(); bindH(c, id);
+  });
+  pr.on('error', e => {
+    if (!alive()) return; const t = e && e.type;
+    if (!host && t === 'peer-unavailable') unav++;
+    if (host && sig && (t === 'network' || t === 'socket-error' || t === 'socket-closed' || t === 'server-error')) return;
+    if (host ? netPhase !== 'lobby' : est) return;
+    if (!host && t === 'peer-unavailable' && tries < 5) { clearTimeout(rt); rt = setTimeout(tryConn, 2500); lob.msg = '部屋が見つかりません。再試行中…(' + tries + '/5)'; renderLobby(); return; }
+    if (host && t === 'unavailable-id' && tc < 3) { netStart(true, mkCode(), tc + 1); return; }
+    const m = t === 'unavailable-id' ? 'コードが重複しました。もう一度お試しください' : t === 'peer-unavailable' ? why() : (t === 'network' || t === 'server-error' || t === 'socket-error' || t === 'socket-closed') ? '接続サーバーにつながりませんでした。少し待ってから、もう一度お試しください' : 'つうしんエラー(' + t + ')。接続できない環境の可能性があります';
+    netLeave(m, again);
+  });
+}
+
+/* ---------- 操作 ---------- */
+$('homeCpu').addEventListener('click', () => { setupKind = 'cpu'; $('err').textContent = ''; renderSetup(); showScreen('setup'); });
+$('homeLocal').addEventListener('click', () => { retryFn = null; showLocal(''); });
+$('localBack').addEventListener('click', () => showScreen('home'));
+$('localHost').addEventListener('click', () => { setupKind = 'net'; $('err').textContent = ''; renderSetup(); showScreen('setup'); });
+$('localJoin').addEventListener('click', () => {
+  const c = $('joinCode').value.normalize('NFKC').replace(/\s/g, '').toLowerCase();
+  if (/^[a-z0-9]{5}$/.test(c)) { netStart(false, c); }
+  else { $('localNote').textContent = 'へやコードは、5文字の英数字だよ'; $('joinCode').focus(); }
+});
+$('localRetry').addEventListener('click', () => { const f = retryFn; retryFn = null; if (f) f(); });
+$('lobBack').addEventListener('click', () => netLeave(''));
+$('homeHow').addEventListener('click', () => showScreen('howto'));
+$('howBack').addEventListener('click', () => showScreen('home'));
+$('setupBack').addEventListener('click', () => { if (setupKind === 'net') showLocal(''); else showScreen('home'); });
+$('start').addEventListener('click', () => {
+  if (setupKind === 'net') {
+    if (netModes.slice(1).filter(m => m === 0).length < 1) { $('err').textContent = '友だち(人間)を1人以上えらんでね'; return; }
+    $('err').textContent = ''; netStart(true, mkCode()); return;
+  }
+  const n = setupModes.filter(m => m !== 2).length;
+  if (n < 2) { $('err').textContent = '2人以上えらんでね'; return; }
+  if (!setupModes.includes(0)) { $('err').textContent = '人間を1人以上えらんでね'; return; }
+  newGame();
+});
+$('roll').addEventListener('click', () => {
+  if (net) {
+    const p = players[cur];
+    if (!busy && running && !winner && p && !p.cpu && !p.remote) { busy = true; render(); sendD(p.idx, 'roll', null); }
+    return;
+  }
+  if (!busy && running && !winner) { follow = true; doRoll().catch(e => { if (e !== 'cancel') console.error(e); }); }
+});
+$('quizOk').addEventListener('click', () => {
+  if (net) {                                        // 通信中: 「つぎへ」も みんなに同じ順でとどける
+    const p = players[cur];
+    if ($('quizOk').style.visibility === 'visible' && p && !p.cpu && !p.remote) { $('quizOk').style.visibility = 'hidden'; sendD(p.idx, 'ok', null); }
+    return;
+  }
+  if (quizResolve && $('quizOk').style.visibility === 'visible') quizResolve();
+});
+$('focus').addEventListener('click', () => { follow = true; });
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && running && !$('roll').disabled && document.activeElement.tagName !== 'BUTTON') {
+    e.preventDefault(); $('roll').click();
+  }
+});
+$('again').addEventListener('click', () => { if (net) { if (role === 'host') hostSendStart(); } else newGame(); });
+$('toMenu').addEventListener('click', () => { if (net) netLeave(''); else toMenu(); });
+$('menu').addEventListener('click', () => { if (net) netLeave(''); else toMenu(); });
+$('mute').addEventListener('click', () => { muted = !muted; $('mute').textContent = 'おと: ' + (muted ? 'OFF' : 'ON'); });
+
+/* 盤面を自分でスライドしたら、自動追従をいったん止める(マウスはドラッグでもスライド) */
+let drag = null;
+vp.addEventListener('wheel', () => { follow = false; }, { passive: true });
+vp.addEventListener('touchstart', () => { follow = false; }, { passive: true });
+vp.addEventListener('pointerdown', e => {
+  follow = false;
+  if (e.pointerType === 'mouse') { drag = { y: e.clientY, s: vp.scrollTop }; vp.setPointerCapture(e.pointerId); vp.style.cursor = 'grabbing'; }
+});
+vp.addEventListener('pointermove', e => { if (drag) vp.scrollTop = drag.s - (e.clientY - drag.y); });
+const endDrag = () => { drag = null; vp.style.cursor = 'grab'; };
+vp.addEventListener('pointerup', endDrag);
+vp.addEventListener('pointercancel', endDrag);
+
+/* ---------- 起動 ---------- */
+buildBoard();
+if (document.fonts && document.fonts.load) {
+  document.fonts.load('13px "DotGothic16"', '化学すごろく(序)').then(buildBoard).catch(() => {});
+}
+drawDice(1);
+renderSetup();
+$('localHelp').innerHTML = HELP_HTML; $('lobHelp').innerHTML = HELP_HTML;
+renderKindList();
+drawCardBack();
+renderDeck(); renderEventDeck(); renderPractice();
+renderCardSamples();
+requestAnimationFrame(frame);
+// QRコードから開いたとき(URLの末尾が #room=コード)は、そのまま部屋に参加する
+{
+  const m = /^#room=([a-z0-9]{5})$/i.exec(location.hash);
+  if (m) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} netStart(false, m[1].toLowerCase()); }
+}
+})();
+</script>
+</body>
+</html>
